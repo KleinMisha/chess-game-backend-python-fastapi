@@ -1,0 +1,36 @@
+{
+    // Workbench settings
+    "workbench.colorCustomizations": {
+        "titleBar.activeBackground": "#74998f",
+    },
+    // Editor settings / formating settings 
+    "ruff.importStrategy": "useBundled",
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+    },
+    "editor.foldingImportsByDefault": false,
+
+    // Python/ Pylance settings
+    "python.analysis.typeCheckingMode": "standard",
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/app"
+    ],
+    // Test settings 
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestPath": "${workspaceFolder}/.venv/bin/pytest",
+    "python.testing.cwd": "${workspaceFolder}/tests",
+    "python.testing.pytestArgs": [
+        "test"
+    ],
+    // Spell checker settings
+    "cSpell.language": "en-US",
+    "cSpell.ignoreWords": [],
+    "cSpell.words": [],
+
+
+
+}
