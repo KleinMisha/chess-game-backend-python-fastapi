@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
-from functools import cached_property
 
 
 class PieceType(Enum):
@@ -32,12 +31,14 @@ PIECE_FEN: dict[str, PieceType] = {
     "k": PieceType.KING,
 }
 
+# NOTE: The king is of course worth infinite points, it is worth the entire game, but does not count towards point totals usually reported
 PIECE_POINTS: dict[PieceType, int] = {
     PieceType.PAWN: 1,
     PieceType.KNIGHT: 3,
     PieceType.BISHOP: 3,
     PieceType.ROOK: 5,
     PieceType.QUEEN: 9,
+    PieceType.KING: 0,
 }
 
 
@@ -45,10 +46,10 @@ PIECE_POINTS: dict[PieceType, int] = {
 class Piece:
     type: PieceType
     color: Color
+    points: int = field(init=False)
 
-    @cached_property
-    def points(self) -> int:
-        return PIECE_POINTS[self.type]
+    def __post_init__(self):
+        self.points = PIECE_POINTS[self.type]
 
     @classmethod
     def from_fen(cls, character: str) -> Piece:
