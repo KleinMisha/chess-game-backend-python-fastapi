@@ -31,14 +31,12 @@ PIECE_FEN: dict[str, PieceType] = {
     "k": PieceType.KING,
 }
 
-# NOTE: The king is of course worth infinite points, it is worth the entire game, but does not count towards point totals usually reported
 PIECE_POINTS: dict[PieceType, int] = {
     PieceType.PAWN: 1,
     PieceType.KNIGHT: 3,
     PieceType.BISHOP: 3,
     PieceType.ROOK: 5,
     PieceType.QUEEN: 9,
-    PieceType.KING: 0,
 }
 
 
@@ -49,7 +47,8 @@ class Piece:
     points: int = field(init=False)
 
     def __post_init__(self):
-        self.points = PIECE_POINTS[self.type]
+        # NOTE: The King's worth is undefined (does not count towards total points), and an empty square should also have zero points
+        self.points = PIECE_POINTS.get(self.type, 0)
 
     @classmethod
     def from_fen(cls, character: str) -> Piece:
