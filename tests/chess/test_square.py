@@ -51,3 +51,9 @@ def test_square_out_of_bounds() -> None:
 
     square = Square(-1, -1)
     assert not square.is_within_bounds()
+
+    square = Square(-1, BOARD_DIMENSIONS[1])
+    assert not square.is_within_bounds()
+
+    square = Square(BOARD_DIMENSIONS[0], -1)
+    assert not square.is_within_bounds()
