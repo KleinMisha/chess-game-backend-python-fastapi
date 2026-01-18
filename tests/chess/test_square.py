@@ -48,3 +48,6 @@ def test_square_out_of_bounds() -> None:
     """Later can check an appropriate error is raised (or whatever I expect to happen)"""
     square = Square(BOARD_DIMENSIONS[0] + 1, BOARD_DIMENSIONS[1] + 1)
     assert not square.is_within_bounds()
+
+    square = Square(-1, -1)
+    assert not square.is_within_bounds()
