@@ -116,10 +116,12 @@ def single_step_move(
         new_file = square.file + df
         new_rank = square.rank + dr
         target_square = Square(new_file, new_rank)
+        if not target_square.is_within_bounds():
+            continue
+
         player_color = board.piece(square).color
         square_available = board.piece(target_square).color != player_color
-
-        if target_square.is_within_bounds() and square_available:
+        if square_available:
             moves.append(Move(from_square=square, to_square=target_square))
 
     return moves
@@ -203,7 +205,16 @@ def candidate_king_moves(square: Square, board: Board) -> list[Move]:
 
     Castling is modelled as a special king move.
     """
-    king_deltas = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+    king_deltas = [
+        (0, 1),
+        (0, -1),
+        (1, 0),
+        (-1, 0),
+        (1, 1),
+        (1, -1),
+        (-1, 1),
+        (-1, -1),
+    ]
     return single_step_move(square, board, king_deltas)
 
 
