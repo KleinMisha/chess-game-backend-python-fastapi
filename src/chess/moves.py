@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Callable, Optional, Protocol
 
-from src.chess.pieces import PIECE_FEN, Color, Piece, PieceType
+from src.chess.pieces import FEN_TO_PIECE, PIECE_TO_FEN, Color, Piece, PieceType
 from src.chess.square import Square
 
 
@@ -61,12 +61,12 @@ class Move:
         to_sq = Square.from_algebraic(uci[2:4])
         move = cls(from_sq, to_sq)
         if len(uci) == 5:
-            move.promote_to = PIECE_FEN[uci[4]]
+            move.promote_to = FEN_TO_PIECE[uci[4]]
         return move
 
     def to_uci(self) -> str:
         """Convert into UCI notation"""
-        piece_char = next((k for k, v in PIECE_FEN.items() if v == self.promote_to), "")
+        piece_char = PIECE_TO_FEN[self.promote_to] if self.promote_to else ""
         return f"{self.from_square.to_algebraic()}{self.to_square.to_algebraic()}{piece_char}"
 
 

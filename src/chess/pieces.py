@@ -22,7 +22,7 @@ class Color(Enum):
     BLACK = "b"
 
 
-PIECE_FEN: dict[str, PieceType] = {
+FEN_TO_PIECE: dict[str, PieceType] = {
     "p": PieceType.PAWN,
     "n": PieceType.KNIGHT,
     "b": PieceType.BISHOP,
@@ -30,6 +30,9 @@ PIECE_FEN: dict[str, PieceType] = {
     "q": PieceType.QUEEN,
     "k": PieceType.KING,
 }
+
+PIECE_TO_FEN: dict[PieceType, str] = {value: key for key, value in FEN_TO_PIECE.items()}
+
 
 PIECE_POINTS: dict[PieceType, int] = {
     PieceType.PAWN: 1,
@@ -54,7 +57,7 @@ class Piece:
     def from_fen(cls, character: str) -> Piece:
         # lower case: Black pieces, upper case: White pieces
         color = Color.WHITE if character.isupper() else Color.BLACK
-        piece_type = PIECE_FEN[character.lower()]
+        piece_type = FEN_TO_PIECE[character.lower()]
         return cls(piece_type, color)
 
     def promote_to(self, new_type: PieceType) -> None:
