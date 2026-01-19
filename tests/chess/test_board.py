@@ -1,11 +1,65 @@
 """Unit tests for /src/chess/board.py"""
 
+from contextlib import AbstractContextManager
+from typing import Any, Callable, Literal
+from unittest.mock import Mock, patch
+
 import pytest
 
-from src.chess.board import Board, Color, Move, Piece, PieceType, Square
+from src.chess.board import Board, Color, Move, Square
+from src.chess.pieces import PIECE_TO_FEN, Piece, PieceType
 
 STARTING_POSITION_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 EMPTY_FEN = "/".join(["8"] * 8)
+PatchContext = AbstractContextManager[None]
+PieceColors = Literal[Color.WHITE, Color.BLACK]
+
+
+@pytest.fixture
+def board_with_single_piece() -> Callable[[PieceType, PieceColors, str], Board]:
+    """Call the inner function that will be returned with the desired piece type, color, and square"""
+
+    def _create_board(
+        piece_type: PieceType,
+        color: PieceColors,
+        square_name: str = "d4",
+    ) -> Board:
+        if color == Color.WHITE:
+            fen_char = PIECE_TO_FEN[piece_type].upper()
+        elif color == Color.BLACK:
+            fen_char = PIECE_TO_FEN[piece_type].lower()
+
+        file_idx = ord(square_name[0]) - ord("a")
+        rank_idx = 8 - int(square_name[1])
+
+        fen_rows = ["8"] * 8
+        fen_rows[rank_idx] = f"{file_idx}{fen_char}{7 - file_idx}"
+        fen = "/".join(fen_rows)
+        return Board.from_fen(fen)
+
+    return _create_board
+
+
+@pytest.fixture
+def patch_candidate_move_functions() -> Callable[
+    [Any], tuple[PatchContext, dict[PieceType, Mock]]
+]:
+    """Call the inner method with the desired return value for all the functions"""
+
+    def _patch_functions(
+        return_value: Any,
+    ) -> tuple[PatchContext, dict[PieceType, Mock]]:
+        mock_rules: dict[PieceType, Mock] = {}
+
+        for piece_type in PieceType:
+            if piece_type == PieceType.EMPTY:
+                continue
+            mock_rules[piece_type] = Mock(return_value=return_value)
+
+        ctx = patch.dict("src.chess.board.MOVEMENT_RULES", mock_rules)
+        return ctx, mock_rules
+
+    return _patch_functions
 
 
 def test_creating_board_in_starting_position() -> None:
@@ -316,3 +370,38 @@ def test_making_a_series_of_moves() -> None:
         board.piece(Square.from_algebraic(sq)) == Piece(PieceType.EMPTY, Color.NONE)
         for sq in ["f3", "f6", "c3", "d8"]
     )
+
+
+@pytest.mark.parametrize(
+    "color, piece_type",
+    [
+        (c, pt)
+        for c in [Color.WHITE, Color.BLACK]
+        for pt in PieceType
+        if pt != PieceType.EMPTY
+    ],
+)
+def test_generating_candidate_moves(
+    color: PieceColors,
+    piece_type: PieceType,
+    board_with_single_piece: Callable[[PieceType, PieceColors, str], Board],
+    patch_candidate_move_functions: Callable[
+        [Any], tuple[PatchContext, dict[PieceType, Mock]]
+    ],
+) -> None:
+    """Test strategy pattern is implemented properly. Checks you only called the correct function and no other."""
+    board: Board = board_with_single_piece(piece_type, color, "d4")
+
+    expected_return: list[str] = [f"{piece_type.name.lower()}_move_list"]
+    patch_ctx, mock_fns = patch_candidate_move_functions(expected_return)
+    with patch_ctx:
+        actual_return = board.generate_candidate_moves(color)
+        assert actual_return == expected_return
+
+        for pt in PieceType:
+            if pt == PieceType.EMPTY:
+                continue
+            if pt == piece_type:
+                mock_fns[pt].assert_called_once()
+            else:
+                mock_fns[pt].assert_not_called()
