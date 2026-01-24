@@ -1,9 +1,8 @@
 """Defines the types of chess pieces"""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from enum import Enum, auto
+from typing import Self
 
 
 class PieceType(Enum):
@@ -54,7 +53,7 @@ class Piece:
         self.points = PIECE_POINTS.get(self.type, 0)
 
     @classmethod
-    def from_fen(cls, character: str) -> Piece:
+    def from_fen(cls, character: str) -> Self:
         # lower case: Black pieces, upper case: White pieces
         color = Color.WHITE if character.isupper() else Color.BLACK
         piece_type = FEN_TO_PIECE[character.lower()]

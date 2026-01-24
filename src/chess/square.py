@@ -4,9 +4,8 @@ A square on the board
 (placed in its own module as multiple other modules need to import it)
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
+from typing import Self
 
 # Chess board is always 8x8. Just in case we want to try some funky stuff, make it adjustable
 BOARD_DIMENSIONS = (8, 8)
@@ -18,7 +17,7 @@ class Square:
     rank: int
 
     @classmethod
-    def from_algebraic(cls, sq: str) -> Square:
+    def from_algebraic(cls, sq: str) -> Self:
         """Algebraic notation: 'a1' - 'h8' get converted to (1,1) - (8,8)"""
         file = ord(sq[0]) - ord("a") + 1
         rank = int(sq[1])

@@ -1,9 +1,8 @@
 """The Game board implements all rules that effect the `position` (in chess: the configuration of pieces on the board)"""
 
-from __future__ import annotations
-
 from copy import deepcopy
 from dataclasses import dataclass
+from typing import Self
 
 from src.chess.moves import MOVEMENT_RULES, CandidateMovesFn, Move
 from src.chess.pieces import Color, Piece, PieceType
@@ -15,7 +14,7 @@ class Board:
     position: dict[Square, Piece]
 
     @classmethod
-    def from_fen(cls, fen_str: str) -> Board:
+    def from_fen(cls, fen_str: str) -> Self:
         """Construct a board using a given FEN string.
 
         That is, we supply the first part of the FEN string that denotes the board position

@@ -6,11 +6,9 @@ Key idea: Use strategy pattern to define legal move sets for each piece type.
 
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Callable, Optional, Protocol
+from typing import Callable, Optional, Protocol, Self
 
 from src.chess.pieces import FEN_TO_PIECE, PIECE_TO_FEN, Color, Piece, PieceType
 from src.chess.square import Square
@@ -43,7 +41,7 @@ class Move:
     is_en_passant: bool = False
 
     @classmethod
-    def from_uci(cls, uci: str) -> Move:
+    def from_uci(cls, uci: str) -> Self:
         """
         Universal Chess Interface:
         ---
