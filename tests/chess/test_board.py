@@ -405,3 +405,18 @@ def test_generating_candidate_moves(
                 mock_fns[pt].assert_called_once()
             else:
                 mock_fns[pt].assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "fen",
+    [
+        STARTING_POSITION_FEN,
+        EMPTY_FEN,
+        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR",
+        "2kr1b1r/p1p1pppp/2p2n2/3q2B1/6Q1/2NP4/PPP2PPP/R4RK1",
+    ],
+)
+def test_writing_board_to_fen(fen: str) -> None:
+    """Check if parsing the dictionary of pieces correctly converted back into the FEN string"""
+    board = Board.from_fen(fen)
+    assert board.to_fen() == fen

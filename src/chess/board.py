@@ -6,7 +6,7 @@ from typing import Self
 
 from src.chess.moves import MOVEMENT_RULES, CandidateMovesFn, Move
 from src.chess.pieces import Color, Piece, PieceType
-from src.chess.square import Square
+from src.chess.square import BOARD_DIMENSIONS, Square
 
 
 @dataclass
@@ -29,10 +29,9 @@ class Board:
         """
         position: dict[Square, Piece] = {}
         fen_by_ranks = fen_str.split("/")
-        print(len(fen_by_ranks))
         for rank_idx, fen_one_rank in enumerate(fen_by_ranks):
             # FEN string is read from top rank (8th) to bottom rank (1st)
-            rank = 8 - rank_idx
+            rank = BOARD_DIMENSIONS[1] - rank_idx
             # ... but the first character is the a-file, so reads in normal direction
             file = 1
             for character in fen_one_rank:
@@ -48,6 +47,32 @@ class Board:
                         )
                         file += 1
         return cls(position)
+
+    def to_fen(self) -> str:
+        """Ranks are separated by slashes in FEN string."""
+        return "/".join(
+            self._rank_to_fen(rank) for rank in range(BOARD_DIMENSIONS[1], 0, -1)
+        )
+
+    def _rank_to_fen(self, rank: int) -> str:
+        """FEN string of a single rank"""
+        fen_characters: list[str] = []
+        empty_count = 0
+        for file in range(1, BOARD_DIMENSIONS[0] + 1):
+            piece = self.piece(Square(file, rank))
+
+            if piece.type != PieceType.EMPTY:
+                if empty_count > 0:
+                    fen_characters.append(str(empty_count))
+                    empty_count = 0
+                fen_characters.append(piece.to_fen())
+            else:
+                empty_count += 1
+
+        # if the entire rank is empty, then we still place this number in the string
+        if empty_count > 0:
+            fen_characters.append(str(empty_count))
+        return "".join(fen_characters)
 
     def piece(self, square: Square) -> Piece:
         return self.position[square]
