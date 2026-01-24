@@ -59,5 +59,12 @@ class Piece:
         piece_type = FEN_TO_PIECE[character.lower()]
         return cls(piece_type, color)
 
+    def to_fen(self) -> str:
+        return (
+            PIECE_TO_FEN[self.type].upper()
+            if self.color == Color.WHITE
+            else PIECE_TO_FEN[self.type].lower()
+        )
+
     def promote_to(self, new_type: PieceType) -> None:
         self.type = new_type
