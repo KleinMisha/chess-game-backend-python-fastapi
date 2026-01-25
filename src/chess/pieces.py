@@ -16,9 +16,9 @@ class PieceType(Enum):
 
 
 class Color(Enum):
-    NONE = ""
-    WHITE = "w"
-    BLACK = "b"
+    NONE = auto()
+    WHITE = auto()
+    BLACK = auto()
 
 
 FEN_TO_PIECE: dict[str, PieceType] = {
