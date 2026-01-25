@@ -2,13 +2,13 @@
 
 import pytest
 
-from src.chess.pieces import Color
-from src.chess.position import (
+from src.chess.fen_state import (
     CastlingDirection,
-    PositionState,
+    FENState,
     castling_from_fen,
     castling_to_fen,
 )
+from src.chess.pieces import Color
 from src.chess.square import Square
 
 
@@ -87,14 +87,14 @@ def test_castling_to_fen(
 )
 def test_fen_parsing_roundtrip(fen: str) -> None:
     """Create a PositionState from FEN, convert back to FEN to check if the order of elements in the FEN string are parsed correctly"""
-    state = PositionState.from_fen(fen)
+    state = FENState.from_fen(fen)
     assert state.to_fen() == fen
 
 
 @pytest.mark.parametrize("color_str, color", [("w", Color.WHITE), ("b", Color.BLACK)])
 def test_color_to_move(color_str: str, color: Color) -> None:
     fen = f"{'/'.join(['8'] * 8)} {color_str} - - 0 1"
-    state = PositionState.from_fen(fen)
+    state = FENState.from_fen(fen)
     assert state.color_to_move == color
 
 
@@ -104,12 +104,12 @@ def test_color_to_move(color_str: str, color: Color) -> None:
 )
 def test_en_passant_square(en_passant_algebraic: str, expected_square: Square) -> None:
     fen = f"{'/'.join(['8'] * 8)} w - {en_passant_algebraic} 0 1"
-    state = PositionState.from_fen(fen)
+    state = FENState.from_fen(fen)
     assert state.en_passant_square == expected_square
 
 
 def test_move_counters() -> None:
     fen = f"{'/'.join(['8'] * 8)} w - - 6 23"
-    state = PositionState.from_fen(fen)
+    state = FENState.from_fen(fen)
     assert state.half_move_clock == 6
     assert state.num_turns == 23

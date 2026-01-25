@@ -9,8 +9,8 @@ Key idea: Use strategy pattern to define legal move sets for each piece type.
 from dataclasses import dataclass
 from typing import Callable, Optional, Protocol, Self
 
+from src.chess.fen_state import CastlingDirection
 from src.chess.pieces import FEN_TO_PIECE, PIECE_TO_FEN, Color, Piece, PieceType
-from src.chess.position import CastlingDirection
 from src.chess.square import Square
 
 

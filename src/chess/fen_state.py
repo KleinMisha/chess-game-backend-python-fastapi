@@ -43,7 +43,7 @@ def castling_to_fen(castling_rights: dict[CastlingDirection, bool]) -> str:
 
 
 @dataclass
-class PositionState:
+class FENState:
     """
     Data that can be constructed from a FEN string.
     ----
