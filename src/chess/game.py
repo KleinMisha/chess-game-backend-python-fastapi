@@ -37,6 +37,15 @@ class Game:
     @classmethod
     def from_model(cls, model: GameModel) -> Self:
         """Define how to construct a Game from the information the Service layer actually has"""
+
+        # Validation
+        status_name = model.status.replace(" ", "_").upper()
+        if status_name not in Status.__members__:
+            raise ValueError(
+                f"Invalid status code: {model.status!r}. Pick one from {','.join([status.name.lower() for status in Status])}"
+            )
+
+        # create the Game
         board = Board.from_fen(model.current_fen.split(" ")[0])
         moves = [Move.from_uci(uci) for uci in model.moves_uci]
         history = model.history_fen
@@ -46,7 +55,7 @@ class Game:
             for color in [Color.WHITE, Color.BLACK]
             if color.name.lower() in model.registered_players.keys()
         }
-        status = Status[model.status.upper()]
+        status = Status[status_name]
 
         return cls(board, moves, history, state, players, status)
 

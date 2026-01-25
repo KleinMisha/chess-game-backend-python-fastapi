@@ -1,5 +1,7 @@
 """Unit tests for /src/chess/moves.py"""
 
+import pytest
+
 from src.chess.game import Board, FENState, Game, GameModel, Move, Status
 
 
@@ -47,7 +49,20 @@ def test_create_game_with_no_move_list() -> None:
         history_fen=[],
         moves_uci=[],
         registered_players={"white": "player_1", "black": "player_2"},
-        status="in_progress",
+        status="in progress",
     )
     game = Game.from_model(model)
     assert game.moves == []
+
+
+def test_invalid_status_name() -> None:
+    """Try creating a game with a non-existing status name (just to make sure a frontend later does not make some kind of odd choice)"""
+    model = GameModel(
+        current_fen=f"{'/'.join(['8'] * 8)} w KQkq - 0 1",
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_1", "black": "player_2"},
+        status="not_existing",
+    )
+    with pytest.raises(ValueError):
+        _ = Game.from_model(model)
