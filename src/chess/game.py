@@ -9,10 +9,11 @@ from enum import Enum, auto
 from typing import Optional, Self
 
 from src.chess.board import Board
-from src.chess.fen_state import FENState
+from src.chess.fen import FENState
 from src.chess.game_model import GameModel
 from src.chess.moves import Move
 from src.chess.pieces import Color
+from src.core.exceptions import GameStateError
 
 
 class Status(Enum):
@@ -41,8 +42,8 @@ class Game:
         # Validation
         status_name = model.status.replace(" ", "_").upper()
         if status_name not in Status.__members__:
-            raise ValueError(
-                f"Invalid status code: {model.status!r}. Pick one from {','.join([status.name.lower() for status in Status])}"
+            raise GameStateError(
+                f"Invalid status code: {model.status!r}. \nPick one from {','.join([status.name.lower() for status in Status])}"
             )
 
         # create the Game
@@ -71,6 +72,33 @@ class Game:
                 "black": self.players[Color.BLACK],
             },
             status=self.status.name.lower(),
+        )
+
+    @classmethod
+    def new_game(
+        cls, player: str, color: str, starting_fen: Optional[str] = None
+    ) -> Self:
+        """To start a new game with the player using the pieces with the indicated color."""
+
+        state = (
+            FENState.from_fen(starting_fen)
+            if starting_fen
+            else FENState.starting_position()
+        )
+        board = Board.from_fen(state.position)
+        available_colors = [c.name for c in Color if c != Color.NONE]
+        if color.upper() not in available_colors:
+            raise GameStateError(
+                f"Color {color} not in {','.join([c.lower() for c in available_colors])}."
+            )
+        player_color = Color[color.upper()]
+        return cls(
+            board=board,
+            moves=[],
+            history=[],
+            state=state,
+            players={player_color: player},
+            status=Status.WAITING_FOR_PLAYERS,
         )
 
     @property

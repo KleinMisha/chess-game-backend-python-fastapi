@@ -1,0 +1,13 @@
+"""Custom exception hierarchy"""
+
+
+class GameError(Exception): ...
+
+
+class InvalidFENError(GameError): ...
+
+
+class InvalidMoveError(GameError): ...
+
+
+class GameStateError(GameError): ...

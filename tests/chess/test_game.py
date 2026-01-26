@@ -3,6 +3,7 @@
 import pytest
 
 from src.chess.game import Board, FENState, Game, GameModel, Move, Status
+from src.core.exceptions import GameStateError
 
 
 def test_game_creation_from_model_roundtrip() -> None:
@@ -33,7 +34,7 @@ def test_game_from_model_builds_domain_objects() -> None:
         history_fen=[],
         moves_uci=["e2e4", "e7e5"],
         registered_players={"white": "player_1", "black": "player_2"},
-        status="in_progress",
+        status="in progress",
     )
     game = Game.from_model(model)
     assert isinstance(game.board, Board)
@@ -64,5 +65,5 @@ def test_invalid_status_name() -> None:
         registered_players={"white": "player_1", "black": "player_2"},
         status="not_existing",
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(GameStateError):
         _ = Game.from_model(model)
