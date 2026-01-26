@@ -4,10 +4,32 @@ Representation of a single position on the board. The part that can be encoded i
 
 from dataclasses import dataclass
 from enum import Enum
+from string import ascii_lowercase
 from typing import Optional, Self
 
-from src.chess.pieces import Color
-from src.chess.square import Square
+from src.chess.pieces import FEN_TO_PIECE, Color
+from src.chess.square import BOARD_DIMENSIONS, Square
+from src.core.exceptions import InvalidFENError
+
+STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+VALID_CASTLING_ENCODINGS = [
+    "-",
+    "K",
+    "Q",
+    "k",
+    "q",
+    "KQ",
+    "Kk",
+    "Kq",
+    "Qk",
+    "Qq",
+    "kq",
+    "KQk",
+    "KQq",
+    "Kkq",
+    "Qkq",
+    "KQkq",
+]
 
 
 class CastlingDirection(Enum):
@@ -40,6 +62,104 @@ def castling_to_fen(castling_rights: dict[CastlingDirection, bool]) -> str:
         [direction.value for direction in CASTLING_ORDER if castling_rights[direction]]
     )
     return castling_chars or "-"
+
+
+def is_valid_fen(fen: str) -> bool:
+    """
+    Check if given string follows proper FEN notation.
+    """
+
+    # there should be 6 parts to the string
+    parts = fen.split(" ")
+    if len(parts) != 6:
+        return False
+
+    position = parts[0]
+    if not is_valid_position(position):
+        return False
+
+    color = parts[1]
+    if not is_valid_color_code(color):
+        return False
+
+    castling = parts[2]
+    if not is_valid_castling_rights(castling):
+        return False
+
+    en_passant = parts[3]
+    if not is_valid_en_passant(en_passant):
+        return False
+
+    half_move_counter = parts[4]
+    full_move_counter = parts[5]
+    if not (
+        is_valid_move_counter(half_move_counter)
+        and is_valid_move_counter(full_move_counter)
+    ):
+        return False
+    return True
+
+
+def is_valid_position(position: str) -> bool:
+    """Only check the part of the FEN encoding for the board position."""
+    num_files, num_ranks = BOARD_DIMENSIONS
+    rank_fens = position.split("/")
+    if len(rank_fens) != num_ranks:
+        return False
+
+    for rank_fen in rank_fens:
+        file_count = 0
+        for character in rank_fen:
+            # make sure every character is valid
+            if character.isdigit():
+                file_count += int(character)
+            elif character.lower() in FEN_TO_PIECE:
+                file_count += 1
+            else:
+                # immediately invalidate if the character is anything else
+                return False
+
+        # make sure you are creating a correctly sized board
+        if file_count != num_files:
+            return False
+    return True
+
+
+def is_valid_color_code(color: str) -> bool:
+    return color in {"w", "b"}
+
+
+def is_valid_castling_rights(castling: str) -> bool:
+    """A valid castling encoding has either KQkq, KQk, etc. or a '-' if all rights have been revoked."""
+    return castling in VALID_CASTLING_ENCODINGS
+
+
+def is_valid_en_passant(en_passant: str) -> bool:
+    """Valid en passant square encoding should be a square that exists on the board or a '-'"""
+    return (en_passant == "-") or is_valid_square(en_passant)
+
+
+def is_valid_square(square: str) -> bool:
+    """Valid square should be a letter for the file + a number for the rank"""
+    num_files, num_ranks = BOARD_DIMENSIONS
+
+    # NOTE: The following works as long as we do not go beyond 26 files. Seems like a reasonable assumption for now ;-)
+    file_char, rank_char = square[0], square[1:]
+    allowed_file_names = ascii_lowercase[:num_files]
+    if file_char not in allowed_file_names:
+        return False
+
+    if not rank_char.isdigit():
+        return False
+
+    if not (1 <= int(rank_char) <= num_ranks):
+        return False
+
+    return True
+
+
+def is_valid_move_counter(counter: str) -> bool:
+    return counter.isdigit()
 
 
 @dataclass
@@ -76,6 +196,11 @@ class FENState:
     @classmethod
     def from_fen(cls, fen: str) -> Self:
         """Parse the FEN into data"""
+
+        # raise an exception if invalid FEN:
+        if not is_valid_fen(fen):
+            raise InvalidFENError(f"Cannot interpret supplied string as FEN: {fen}")
+
         # extract the different components. FEN is space separated
         (
             position,
@@ -126,3 +251,7 @@ class FENState:
 
         fen = f"{self.position} {active_color} {castling_str} {en_passant_algebraic} {half_move_clock} {num_turns}"
         return fen
+
+    @classmethod
+    def starting_position(cls) -> Self:
+        return cls.from_fen(STARTING_FEN)
