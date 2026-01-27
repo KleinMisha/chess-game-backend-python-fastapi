@@ -5,6 +5,7 @@ import pytest
 from src.chess.fen import (
     VALID_CASTLING_ENCODINGS,
     CastlingDirection,
+    CastlingSquares,
     FENState,
     InvalidFENError,
     castling_from_fen,
@@ -255,3 +256,12 @@ def test_invalid_fen(fen: str) -> None:
 def test_creating_standard_starting_position() -> None:
     state = FENState.starting_position()
     assert state.to_fen() == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+
+def test_castling_squares_creation() -> None:
+    """Test one case, just to have a little contract stating: 'I want to be able to create this dataclass'"""
+    castling_squares = CastlingSquares.from_algebraic("e1", "g1", "h1", "f1")
+    assert castling_squares.king_from == Square.from_algebraic("e1")
+    assert castling_squares.king_to == Square.from_algebraic("g1")
+    assert castling_squares.rook_from == Square.from_algebraic("h1")
+    assert castling_squares.rook_to == Square.from_algebraic("f1")
