@@ -112,16 +112,16 @@ class Board:
             candidate_moves.extend(piece_moves)
         return candidate_moves
 
-    def apply_move(self, move: Move) -> None:
+    def move_piece(self, move: Move) -> None:
         """Update the position on the board"""
         piece_that_moved = self.piece(move.from_square)
         self.position[move.from_square] = Piece(PieceType.EMPTY, Color.NONE)
         self.position[move.to_square] = piece_that_moved
 
-    def apply_moves(self, moves: list[Move]) -> None:
+    def move_pieces(self, moves: list[Move]) -> None:
         """convenience method to apply multiple moves (if you quickly want to start a board in a given position reached after some moves)"""
         for move in moves:
-            self.apply_move(move)
+            self.move_piece(move)
 
     def count_material(self) -> dict[Color, int]:
         """Tally the points of material each player has on the board"""

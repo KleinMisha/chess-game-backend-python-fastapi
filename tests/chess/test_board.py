@@ -331,7 +331,7 @@ def test_single_move_updates(uci_move: str) -> None:
     board = Board.from_fen(STARTING_POSITION_FEN)
     move = Move.from_uci(uci_move)
     moving_piece = board.piece(move.from_square)
-    board.apply_move(move)
+    board.move_piece(move)
     assert board.piece(move.from_square) == Piece(PieceType.EMPTY, Color.NONE)
     assert board.piece(move.to_square) == moving_piece
 
@@ -340,9 +340,9 @@ def test_making_a_series_of_moves() -> None:
     """Play a couple of typical moves, including taking pieces, check moves are applied correctly, material gets updated appropriately, etc."""
     board = Board.from_fen(STARTING_POSITION_FEN)
     e4_e5 = [Move.from_uci("e2e4"), Move.from_uci("d7d5")]
-    board.apply_moves(e4_e5)
+    board.move_pieces(e4_e5)
     e_takes_d = Move.from_uci("e4d5")
-    board.apply_move(e_takes_d)
+    board.move_piece(e_takes_d)
     assert board.count_material() == {Color.WHITE: 39, Color.BLACK: 38}
     assert board.piece(Square.from_algebraic("d5")) == Piece(
         PieceType.PAWN, Color.WHITE
@@ -362,7 +362,7 @@ def test_making_a_series_of_moves() -> None:
         Move.from_uci("f6d5"),
         Move.from_uci("f3d5"),
     ]
-    board.apply_moves(more_moves)
+    board.move_pieces(more_moves)
     assert board.piece(Square.from_algebraic("d5")) == Piece(
         PieceType.QUEEN, Color.WHITE
     )
