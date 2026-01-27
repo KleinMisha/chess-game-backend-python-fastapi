@@ -3,6 +3,7 @@
 import pytest
 
 from src.chess.fen import (
+    CASTLING_RULES,
     VALID_CASTLING_ENCODINGS,
     CastlingDirection,
     CastlingSquares,
@@ -265,3 +266,21 @@ def test_castling_squares_creation() -> None:
     assert castling_squares.king_to == Square.from_algebraic("g1")
     assert castling_squares.rook_from == Square.from_algebraic("h1")
     assert castling_squares.rook_to == Square.from_algebraic("f1")
+
+
+@pytest.mark.parametrize(
+    "direction,k_from,k_to,r_from,r_to",
+    [
+        (CastlingDirection.WHITE_KING_SIDE, "e1", "g1", "h1", "f1"),
+        (CastlingDirection.WHITE_QUEEN_SIDE, "e1", "c1", "a1", "d1"),
+        (CastlingDirection.BLACK_KING_SIDE, "e8", "g8", "h8", "f8"),
+        (CastlingDirection.BLACK_QUEEN_SIDE, "e8", "c8", "a8", "d8"),
+    ],
+)
+def test_canonical_castling_rules(
+    direction: CastlingDirection, k_from: str, k_to: str, r_from: str, r_to: str
+) -> None:
+    """Classical castling positional changes of the king and rook."""
+    rule = CASTLING_RULES[direction]
+    expected = CastlingSquares.from_algebraic(k_from, k_to, r_from, r_to)
+    assert expected == rule
