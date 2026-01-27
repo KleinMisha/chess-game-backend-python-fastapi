@@ -21,6 +21,9 @@ class Color(Enum):
     BLACK = auto()
 
 
+AVAILABLE_COLOR_NAMES = [c.name for c in Color if c != Color.NONE]
+
+
 FEN_TO_PIECE: dict[str, PieceType] = {
     "p": PieceType.PAWN,
     "n": PieceType.KNIGHT,
