@@ -62,6 +62,28 @@ def patch_candidate_move_functions() -> Callable[
     return _patch_functions
 
 
+@pytest.fixture
+def patch_attack_rule_functions() -> Callable[
+    [], tuple[PatchContext, dict[PieceType, Mock]]
+]:
+    """Call the inner method with the desired return value for all the functions"""
+
+    def _patch_functions() -> tuple[PatchContext, dict[PieceType, Mock]]:
+        mock_rules: dict[PieceType, Mock] = {}
+
+        for piece_type in PieceType:
+            if piece_type == PieceType.EMPTY:
+                continue
+            # return FALSE to ensure all methods must be called (no early break out of the test for attacker)
+            mock_rules[piece_type] = Mock(return_value=False)
+
+        ctx = patch.dict("src.chess.board.ATTACK_RULES", mock_rules)
+        return ctx, mock_rules
+
+    return _patch_functions
+
+
+# -- CREATION LOGIC ---
 def test_creating_board_in_starting_position() -> None:
     """Make sure board position is correctly initialized using a partial FEN string
 
@@ -246,6 +268,7 @@ def test_creating_empty_board() -> None:
     )
 
 
+# -- COUNTING MATERIAL --
 def test_no_material_left() -> None:
     """With only the kings left, the players should have zero points of material"""
     #  empty board
@@ -286,6 +309,7 @@ def test_material_mid_game() -> None:
     }
 
 
+# -- LOCATING PIECES --
 def test_locating_pawns() -> None:
     """Locating the pawns in the starting position"""
     board = Board.from_fen(STARTING_POSITION_FEN)
@@ -322,6 +346,7 @@ def test_locating_color(player_color: Color) -> None:
     )
 
 
+# --- PIECE MOVEMENTS / BOARD UPDATES ---
 @pytest.mark.parametrize("uci_move", ["e2e4", "a1a5", "d2e4", "g3a7"])
 def test_single_move_updates(uci_move: str) -> None:
     """Play a single move / update the board. Checks that the square it left from is set to empty and piece is now at target square
@@ -407,6 +432,33 @@ def test_generating_candidate_moves(
                 mock_fns[pt].assert_not_called()
 
 
+# -- ATTACK DETECTION --
+
+
+@pytest.mark.parametrize("color", [color for color in [Color.WHITE, Color.BLACK]])
+def test_attack_detection(
+    color: PieceColors,
+    patch_attack_rule_functions: Callable[
+        [], tuple[PatchContext, dict[PieceType, Mock]]
+    ],
+) -> None:
+    """Test strategy pattern is implemented properly. Checks you attempt attack detection for every piece type once."""
+
+    # on an empty board we should for sure call all the strategies once
+    board = Board.from_fen(EMPTY_FEN)
+    a1 = Square.from_algebraic("a1")
+    patch_ctx, mock_fns = patch_attack_rule_functions()
+    with patch_ctx:
+        board.is_square_attacked(a1, color)
+
+        for pt in PieceType:
+            print(pt)
+            if pt == PieceType.EMPTY:
+                continue
+            mock_fns[pt].assert_called_once()
+
+
+# -- ENCODING BOARD IN FEN --
 @pytest.mark.parametrize(
     "fen",
     [
