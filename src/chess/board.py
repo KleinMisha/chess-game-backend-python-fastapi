@@ -4,7 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Self
 
-from src.chess.moves import ATTACK_RULES, MOVEMENT_RULES, Move
+from src.chess.moves import ATTACK_RULES, MOVEMENT_RULES, Move, squares_between_on_rank
 from src.chess.pieces import Color, Piece, PieceType
 from src.chess.square import BOARD_DIMENSIONS, Square
 
@@ -106,6 +106,14 @@ class Board:
         # TODO: If I ONLY need this version, just remove the previous method and move the logic into here
         return self.locate_pieces(PieceType.EMPTY)
 
+    def empty_squares_between_on_rank(
+        self, from_square: Square, to_square: Square
+    ) -> list[Square]:
+        """Find the empty squares in between two pieces on the same rank"""
+        empty_squares = self.empty_squares()
+        squares_between = squares_between_on_rank(from_square, to_square)
+        return [square for square in squares_between if square in empty_squares]
+
     def generate_candidate_moves(self, color: Color) -> list[Move]:
         """
         Before knowing the set of legal moves, we use raycasting to find candidate moves, which will later be tested for legality
@@ -127,8 +135,9 @@ class Board:
     def move_piece(self, move: Move) -> None:
         """Update the position on the board"""
         piece_that_moved = self.piece(move.from_square)
-        self.position[move.from_square] = Piece(PieceType.EMPTY, Color.NONE)
-        self.position[move.to_square] = piece_that_moved
+        empty = Piece(PieceType.EMPTY, Color.NONE)
+        self.place_piece(empty, move.from_square)
+        self.place_piece(piece_that_moved, move.to_square)
 
     def move_pieces(self, moves: list[Move]) -> None:
         """convenience method to apply multiple moves (if you quickly want to start a board in a given position reached after some moves)"""

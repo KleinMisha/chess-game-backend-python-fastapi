@@ -385,6 +385,77 @@ def test_finding_the_king(color: PieceColors, king_square: str) -> None:
     assert found_piece == expected_king
 
 
+def test_finding_empty_squares_between_on_rank_empty_board() -> None:
+    """
+    `board.empty_squares()` and src/chess/moves.py:squares_between_on_rank() have already been tested.
+    Here test no accidental filtering happens on an empty board (should return the same as the squares_between_on_rank() method itself.)
+    """
+
+    a1 = Square.from_algebraic("a1")
+    b1 = Square.from_algebraic("b1")
+    c1 = Square.from_algebraic("c1")
+    d1 = Square.from_algebraic("d1")
+    e1 = Square.from_algebraic("e1")
+    f1 = Square.from_algebraic("f1")
+    g1 = Square.from_algebraic("g1")
+    h1 = Square.from_algebraic("h1")
+
+    board = Board.from_fen(EMPTY_FEN)
+    squares_found = board.empty_squares_between_on_rank(h1, a1)
+    assert len(squares_found) == 6
+    assert set(squares_found) == {b1, c1, d1, e1, f1, g1}
+
+
+def test_finding_empty_squares_between_on_rank_filled_board() -> None:
+    """
+    If rank is completely filled --> should find no empty squares.
+    """
+
+    a1 = Square.from_algebraic("a1")
+    b1 = Square.from_algebraic("b1")
+    c1 = Square.from_algebraic("c1")
+    d1 = Square.from_algebraic("d1")
+    e1 = Square.from_algebraic("e1")
+    f1 = Square.from_algebraic("f1")
+    g1 = Square.from_algebraic("g1")
+    h1 = Square.from_algebraic("h1")
+
+    board = Board.from_fen(EMPTY_FEN)
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+    board.place_piece(black_pawn, b1)
+    board.place_piece(black_pawn, c1)
+    board.place_piece(black_pawn, d1)
+    board.place_piece(black_pawn, e1)
+    board.place_piece(black_pawn, g1)
+    board.place_piece(black_pawn, f1)
+
+    squares_found = board.empty_squares_between_on_rank(h1, a1)
+    assert squares_found == []
+
+
+def test_finding_empty_squares_between_on_rank_one_square_filled() -> None:
+    """
+    Place one piece on the board, check that square gets excluded from the list.
+    """
+
+    a1 = Square.from_algebraic("a1")
+    b1 = Square.from_algebraic("b1")
+    c1 = Square.from_algebraic("c1")
+    d1 = Square.from_algebraic("d1")
+    e1 = Square.from_algebraic("e1")
+    f1 = Square.from_algebraic("f1")
+    g1 = Square.from_algebraic("g1")
+    h1 = Square.from_algebraic("h1")
+
+    board = Board.from_fen(EMPTY_FEN)
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+    board.place_piece(black_pawn, b1)
+
+    squares_found = board.empty_squares_between_on_rank(h1, a1)
+    assert len(squares_found) == 5
+    assert set(squares_found) == {c1, d1, e1, f1, g1}
+
+
 # --- PIECE MOVEMENTS / BOARD UPDATES ---
 @pytest.mark.parametrize("uci_move", ["e2e4", "a1a5", "d2e4", "g3a7"])
 def test_single_move_updates(uci_move: str) -> None:
