@@ -1,15 +1,16 @@
 """
-
-Calculating legal moves. Here is where most of the the rules of chess are encoded
+Geometry/Base movement and capturing/attacking rules
 
 Key idea: Use strategy pattern to define legal move sets for each piece type.
 
+
+Legality is checked later by Game
 """
 
 from dataclasses import dataclass
 from typing import Callable, Optional, Protocol, Self
 
-from src.chess.fen import CastlingDirection
+from src.chess.fen import CASTLING_RULES, CastlingDirection
 from src.chess.pieces import FEN_TO_PIECE, PIECE_TO_FEN, Color, Piece, PieceType
 from src.chess.square import Square
 
@@ -21,6 +22,9 @@ class Board(Protocol):
     def empty_squares(self) -> list[Square]: ...
 
 
+Vector = tuple[int, int]
+
+
 @dataclass
 class Move:
     """basic definition of a move to be made"""
@@ -28,7 +32,7 @@ class Move:
     from_square: Square
     to_square: Square
     promote_to: Optional[PieceType] = None
-    castle: Optional[CastlingDirection] = None
+    castling_direction: Optional[CastlingDirection] = None
     is_en_passant: bool = False
 
     @classmethod
@@ -59,10 +63,15 @@ class Move:
         return f"{self.from_square.to_algebraic()}{self.to_square.to_algebraic()}{piece_char}"
 
 
-def raycasting(
-    square: Square, board: Board, directions: list[tuple[int, int]]
+# --- MOVEMENT RULES ---
+def raycasting_move(
+    square: Square, board: Board, directions: list[Vector]
 ) -> list[Move]:
     """
+    Raycasting algorithm
+    -----
+
+    ---
     The main trick we use to check the 'line of sight of a piece'.
     We define move directions and move along them until we hit another piece or
     the edge of the board.
@@ -96,9 +105,7 @@ def raycasting(
     return moves
 
 
-def single_step_move(
-    square: Square, board: Board, deltas: list[tuple[int, int]]
-) -> list[Move]:
+def single_step_move(square: Square, board: Board, deltas: list[Vector]) -> list[Move]:
     """Raycasting is for sliding pieces. This is the equivalent for pawns, kings, and knights that just can move a single step along a direction"""
     moves: list[Move] = []
     for df, dr in deltas:
@@ -127,11 +134,13 @@ def candidate_pawn_moves(square: Square, board: Board) -> list[Move]:
     """
     moves: list[Move] = []
     # Pawn pushes : Black moves down the board, White moves up the board
-    pawn_push = [(0, 1)] if board.piece(square).color == Color.WHITE else [(0, -1)]
+    pawn_push: list[Vector] = (
+        [(0, 1)] if board.piece(square).color == Color.WHITE else [(0, -1)]
+    )
     moves.extend(single_step_move(square, board, pawn_push))
 
     # pawns take diagonally:
-    pawn_takes = (
+    pawn_takes: list[Vector] = (
         [(1, 1), (-1, 1)]
         if board.piece(square).color == Color.WHITE
         else [(1, -1), (-1, -1)]
@@ -151,7 +160,7 @@ def candidate_pawn_moves(square: Square, board: Board) -> list[Move]:
 
 def candidate_knight_moves(square: Square, board: Board) -> list[Move]:
     """Knights always much such that |delta_rank| + |delta_file| = 3"""
-    knight_deltas = [
+    knight_deltas: list[Vector] = [
         (2, 1),
         (2, -1),
         (-2, 1),
@@ -166,16 +175,16 @@ def candidate_knight_moves(square: Square, board: Board) -> list[Move]:
 
 def candidate_bishop_moves(square: Square, board: Board) -> list[Move]:
     """Bishops move diagonally: |delta_rank| = |delta_file|"""
-    diagonals = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
-    return raycasting(square, board, diagonals)
+    diagonals: list[Vector] = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
+    return raycasting_move(square, board, diagonals)
 
 
 def candidate_rook_moves(square: Square, board: Board) -> list[Move]:
     """Rooks move either horizontally or vertically"""
     stay_on_rank = [(1, 0), (-1, 0)]
     stay_on_file = [(0, 1), (0, -1)]
-    horizontal_moves = raycasting(square, board, stay_on_rank)
-    vertical_moves = raycasting(square, board, stay_on_file)
+    horizontal_moves = raycasting_move(square, board, stay_on_rank)
+    vertical_moves = raycasting_move(square, board, stay_on_file)
     return horizontal_moves + vertical_moves
 
 
@@ -192,9 +201,9 @@ def candidate_king_moves(square: Square, board: Board) -> list[Move]:
     """
     The king can move by a single square at the time.
 
-    Castling is modelled as a special king move.
+    Castling is modelled as a special king move (handled separately).
     """
-    king_deltas = [
+    king_deltas: list[Vector] = [
         (0, 1),
         (0, -1),
         (1, 0),
@@ -207,7 +216,7 @@ def candidate_king_moves(square: Square, board: Board) -> list[Move]:
     return single_step_move(square, board, king_deltas)
 
 
-# Strategy pattern:
+# -- STRATEGY PATTERN: MOVEMENT RULES ---
 CandidateMovesFn = Callable[[Square, Board], list[Move]]
 MOVEMENT_RULES: dict[PieceType, CandidateMovesFn] = {
     PieceType.PAWN: candidate_pawn_moves,
@@ -217,3 +226,191 @@ MOVEMENT_RULES: dict[PieceType, CandidateMovesFn] = {
     PieceType.QUEEN: candidate_queen_moves,
     PieceType.KING: candidate_king_moves,
 }
+
+
+# --- CAPTURING RULES / ATTACKING RULES ---
+def raycasting_attack(
+    square: Square,
+    by_color: Color,
+    by_piece_type: PieceType,
+    board: Board,
+    directions: list[Vector],
+) -> bool:
+    """
+    Raycasting algorithm for attacks.
+    ---
+
+    ---
+    Similar to raycasting moves.
+    However, where `raycasting_move()` determines
+    _"What is the line-of-sight of the piece standing on the specified square?"_
+
+
+    This function determines:
+    _"Is the piece standing on the specified square in the line-of-sight of a piece of the specified color and that
+    is allowed to move along the given direction?"_
+
+
+    We define move directions and move along them until we hit another piece or
+    the edge of the board.
+
+    ---
+    Returns TRUE if the piece encountered is an opponent's piece or the specified type.
+    """
+
+    empty_squares = board.empty_squares()
+    for df, dr in directions:
+        file = square.file
+        rank = square.rank
+        while True:
+            file += df
+            rank += dr
+            target_square = Square(file, rank)
+
+            if not target_square.is_within_bounds():
+                break
+
+            if target_square not in empty_squares:
+                # only need to find the first occupied square found if it is the opponent's: then your piece is under attack.
+                piece_found = board.piece(target_square)
+                if (piece_found.color == by_color) and (
+                    piece_found.type == by_piece_type
+                ):
+                    return True
+                break
+    return False
+
+
+def single_step_attack(
+    square: Square,
+    by_color: Color,
+    by_piece_type: PieceType,
+    board: Board,
+    deltas: list[Vector],
+) -> bool:
+    """
+    Raycasting is for sliding pieces. This is the equivalent for pawns, kings, and knights that just can move a single step along a direction.
+    Hence, they also can only attack along a single direction.
+
+    ---
+    Returns TRUE if the piece encountered is an opponent's piece or the specified type.
+    """
+    for df, dr in deltas:
+        new_file = square.file + df
+        new_rank = square.rank + dr
+        target_square = Square(new_file, new_rank)
+        if not target_square.is_within_bounds():
+            continue
+
+        # NOTE: PieceType and Color already include the case of an empty square (so 'piece found in the broad sense here')
+        piece_found = board.piece(target_square)
+        if (piece_found.color == by_color) and (piece_found.type == by_piece_type):
+            return True
+        continue
+
+    return False
+
+
+def is_attacked_by_pawn(square: Square, by_color: Color, board: Board) -> bool:
+    """
+    Pawns take diagonally
+    ----
+
+    NOTE: Pawn moves are not symmetric, so to check IF a white pawn could move into your square -->
+    Must look one rank DOWN the board. That is, you are asking "Could a white pawn, that moves UP the board, take on the specified square?"
+
+    Hence, vectors are exactly opposite to the ones used to check if you could move to a square by taking (see `candidate_pawn_moves()`)
+    """
+    inverse_pawn_take_deltas: list[Vector] = (
+        [(1, -1), (-1, -1)] if by_color == Color.WHITE else [(1, 1), (-1, 1)]
+    )
+    return single_step_attack(
+        square, by_color, PieceType.PAWN, board, inverse_pawn_take_deltas
+    )
+
+
+def is_attacked_by_knight(square: Square, by_color: Color, board: Board) -> bool:
+    """Knights always much such that |delta_rank| + |delta_file| = 3"""
+    knight_deltas: list[Vector] = [
+        (2, 1),
+        (2, -1),
+        (-2, 1),
+        (-2, -1),
+        (1, 2),
+        (1, -2),
+        (-1, 2),
+        (-1, -2),
+    ]
+    return single_step_attack(square, by_color, PieceType.KNIGHT, board, knight_deltas)
+
+
+def is_attacked_by_bishop(square: Square, by_color: Color, board: Board) -> bool:
+    """Bishops move diagonally: |delta_rank| = |delta_file|"""
+    diagonals: list[Vector] = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
+    return raycasting_attack(square, by_color, PieceType.BISHOP, board, diagonals)
+
+
+def is_attacked_by_rook(square: Square, by_color: Color, board: Board) -> bool:
+    """Rooks move either horizontally or vertically"""
+    horizontal = [(1, 0), (-1, 0)]
+    vertical = [(0, 1), (0, -1)]
+    straights: list[Vector] = horizontal + vertical
+    return raycasting_attack(square, by_color, PieceType.ROOK, board, straights)
+
+
+def is_attacked_by_queen(square: Square, by_color: Color, board: Board) -> bool:
+    """
+    The Queen combines the rook moves (horizontal + vertical movements) and bishop moves (diagonal movement)
+    """
+    horizontal = [(1, 0), (-1, 0)]
+    vertical = [(0, 1), (0, -1)]
+    straights: list[Vector] = horizontal + vertical
+    diagonals: list[Vector] = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
+    queen_on_straight = raycasting_attack(
+        square, by_color, PieceType.QUEEN, board, straights
+    )
+    queen_on_diagonal = raycasting_attack(
+        square, by_color, PieceType.QUEEN, board, diagonals
+    )
+    return queen_on_straight or queen_on_diagonal
+
+
+def is_attacked_by_king(square: Square, by_color: Color, board: Board) -> bool:
+    """
+    The king can move by a single square at the time.
+    """
+    king_deltas: list[Vector] = [
+        (0, 1),
+        (0, -1),
+        (1, 0),
+        (-1, 0),
+        (1, 1),
+        (1, -1),
+        (-1, 1),
+        (-1, -1),
+    ]
+    return single_step_attack(square, by_color, PieceType.KING, board, king_deltas)
+
+
+# --- STRATEGY PATTERN: ATTACKING RULES ---
+IsAttackedFn = Callable[[Square, Color, Board], bool]
+ATTACK_RULES: dict[PieceType, IsAttackedFn] = {
+    PieceType.PAWN: is_attacked_by_pawn,
+    PieceType.KNIGHT: is_attacked_by_knight,
+    PieceType.BISHOP: is_attacked_by_bishop,
+    PieceType.ROOK: is_attacked_by_rook,
+    PieceType.QUEEN: is_attacked_by_queen,
+    PieceType.KING: is_attacked_by_king,
+}
+
+
+# -- CASTLING MOVES ---
+def castling_king_squares(direction: CastlingDirection) -> tuple[Square, Square]:
+    """convert the castling rule into a move of the king + the castling direction set properly"""
+    rule = CASTLING_RULES[direction]
+    return rule.king_from, rule.king_to
+
+
+def castling_rook_squares(direction: CastlingDirection) -> tuple[Square, Square]:
+    rule = CASTLING_RULES[direction]
+    return rule.rook_from, rule.rook_to

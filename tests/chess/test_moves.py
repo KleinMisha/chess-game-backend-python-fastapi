@@ -7,7 +7,9 @@ import pytest
 import src.chess.moves as mv
 from src.chess.board import Board
 from src.chess.moves import (
+    Color,
     Move,
+    Piece,
     PieceType,
     Square,
     candidate_bishop_moves,
@@ -16,7 +18,15 @@ from src.chess.moves import (
     candidate_pawn_moves,
     candidate_queen_moves,
     candidate_rook_moves,
-    raycasting,
+    is_attacked_by_bishop,
+    is_attacked_by_king,
+    is_attacked_by_knight,
+    is_attacked_by_pawn,
+    is_attacked_by_queen,
+    is_attacked_by_rook,
+    raycasting_attack,
+    raycasting_move,
+    single_step_attack,
     single_step_move,
 )
 from src.chess.square import BOARD_DIMENSIONS
@@ -26,6 +36,7 @@ PIECE_ON_E5 = "/".join(["8", "8", "8", "3P4", "8", "8", "8", "8"])
 EMPTY_FEN = "/".join(["8"] * 8)
 
 
+# -- MOVE CREATION, ENCODING/DECODING UCI NOTATION ---
 @pytest.mark.parametrize(
     "uci_move, from_uci, to_uci",
     [
@@ -75,22 +86,23 @@ def test_converting_into_uci_incl_promotion() -> None:
     assert move.to_uci() == "e7e8q"
 
 
-def test_raycasting_empty_board() -> None:
+# --- MOVEMENT RULES ---
+def test_raycasting_move_empty_board() -> None:
     """On an empty board, movements should be unrestricted. Should only be restricted by board dimensions"""
     board = Board.from_fen(EMPTY_FEN)
     starting_square = Square.from_algebraic("a5")
     horizontal_moves = [(1, 0), (-1, 0)]
-    moves = raycasting(starting_square, board, horizontal_moves)
+    moves = raycasting_move(starting_square, board, horizontal_moves)
     assert len(moves) == BOARD_DIMENSIONS[0] - 1
     assert all(move.from_square.file == starting_square.file for move in moves)
 
     vertical_moves = [(0, 1), (0, -1)]
-    moves = raycasting(starting_square, board, vertical_moves)
+    moves = raycasting_move(starting_square, board, vertical_moves)
     assert len(moves) == BOARD_DIMENSIONS[1] - 1
     assert all(move.from_square.rank == starting_square.rank for move in moves)
 
 
-def test_raycasting_w_enemy_blocker() -> None:
+def test_raycasting_move_w_enemy_blocker() -> None:
     """
     When running into enemy piece, still include in list of moves
 
@@ -101,7 +113,7 @@ def test_raycasting_w_enemy_blocker() -> None:
     board = Board.from_fen(d2_white_d5_black)
     starting_square = Square.from_algebraic("d2")
     vertical_moves = [(0, 1), (0, -1)]
-    moves = raycasting(starting_square, board, vertical_moves)
+    moves = raycasting_move(starting_square, board, vertical_moves)
     uci_moves = set([move.to_uci() for move in moves])
     assert uci_moves == set(["d2d1", "d2d3", "d2d4", "d2d5"])
 
@@ -110,12 +122,12 @@ def test_raycasting_w_enemy_blocker() -> None:
     board = Board.from_fen(d2_white_f4_black)
     starting_square = Square.from_algebraic("d2")
     diagonal_moves = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
-    moves = raycasting(starting_square, board, diagonal_moves)
+    moves = raycasting_move(starting_square, board, diagonal_moves)
     uci_moves = set([move.to_uci() for move in moves])
     assert uci_moves == set(["d2c1", "d2e3", "d2f4", "d2c3", "d2b4", "d2a5", "d2e1"])
 
 
-def test_raycasting_w_friendly_blocker() -> None:
+def test_raycasting_move_w_friendly_blocker() -> None:
     """
     When your own piece is blocking, do not include a move to that square in the move list
     """
@@ -124,7 +136,7 @@ def test_raycasting_w_friendly_blocker() -> None:
     board = Board.from_fen(d2_white_d5_white)
     starting_square = Square.from_algebraic("d2")
     vertical_moves = [(0, 1), (0, -1)]
-    moves = raycasting(starting_square, board, vertical_moves)
+    moves = raycasting_move(starting_square, board, vertical_moves)
     uci_moves = set([move.to_uci() for move in moves])
     assert uci_moves == set(["d2d1", "d2d3", "d2d4"])
 
@@ -133,12 +145,12 @@ def test_raycasting_w_friendly_blocker() -> None:
     board = Board.from_fen(d2_black_f4_black)
     starting_square = Square.from_algebraic("d2")
     diagonal_moves = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
-    moves = raycasting(starting_square, board, diagonal_moves)
+    moves = raycasting_move(starting_square, board, diagonal_moves)
     uci_moves = set([move.to_uci() for move in moves])
     assert uci_moves == set(["d2c1", "d2e3", "d2c3", "d2b4", "d2a5", "d2e1"])
 
 
-def test_raycasting_w_mixed_blockers() -> None:
+def test_raycasting_move_w_mixed_blockers() -> None:
     """
     Blockers of both your own pieces (cannot move past) as well as your opponent's pieces (capture first one in sight).
     """
@@ -147,7 +159,7 @@ def test_raycasting_w_mixed_blockers() -> None:
     board = Board.from_fen(a1_black_a5_white_a7_white)
     starting_square = Square.from_algebraic("a5")
     vertical_moves = [(0, 1), (0, -1)]
-    moves = raycasting(starting_square, board, vertical_moves)
+    moves = raycasting_move(starting_square, board, vertical_moves)
     uci_moves = set([move.to_uci() for move in moves])
     assert uci_moves == set(["a5a4", "a5a3", "a5a2", "a5a1", "a5a6"])
 
@@ -221,12 +233,15 @@ def test_candidate_bishop_moves() -> None:
     d4_white = "/".join(["8", "8", "8", "8", "3B4", "8", "8", "8"])
     board = Board.from_fen(d4_white)
     d4 = Square.from_algebraic("d4")
-    diagonal_moves = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
+    diagonal_moves = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
 
     # check wiring
-    with patch.object(mv, "raycasting") as mock_raycasting:
+    with patch.object(mv, "raycasting_move") as mock_raycasting:
         moves = candidate_bishop_moves(d4, board)
-        mock_raycasting.assert_called_once_with(d4, board, diagonal_moves)
+        args, _ = mock_raycasting.call_args
+        assert args[0] == d4
+        assert args[1] == board
+        assert set(args[2]) == set(diagonal_moves)
 
     # check behavior: make sure no typo in directions
     moves = candidate_bishop_moves(d4, board)
@@ -246,7 +261,7 @@ def test_candidate_rook_moves() -> None:
     vertical_moves = [(1, 0), (-1, 0)]
 
     # check wiring
-    with patch.object(mv, "raycasting") as mock_raycasting:
+    with patch.object(mv, "raycasting_move") as mock_raycasting:
         moves = candidate_rook_moves(d4, board)
         mock_raycasting.assert_has_calls(
             [call(d4, board, horizontal_moves), call(d4, board, vertical_moves)],
@@ -272,7 +287,7 @@ def test_candidate_queen_moves() -> None:
     diagonal_moves = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
 
     # check wiring
-    with patch.object(mv, "raycasting") as mock_raycasting:
+    with patch.object(mv, "raycasting_move") as mock_raycasting:
         moves = candidate_queen_moves(d4, board)
         mock_raycasting.assert_has_calls(
             [
@@ -403,3 +418,492 @@ def test_black_pawn_takes() -> None:
     uci_moves = set([move.to_uci() for move in moves])
     assert len(moves) == 3
     assert uci_moves == set(["d4d3", "d4e3", "d4c3"])
+
+
+# --- ATTACK RULES ---
+def test_raycasting_attack_empty_board() -> None:
+    """Sanity check: with the board empty, no square should be under attack."""
+    board = Board.from_fen(EMPTY_FEN)
+    a5 = Square.from_algebraic("a5")
+    on_same_file = [(1, 0), (-1, 0)]
+    on_same_rank = [(0, 1), (0, -1)]
+    diagonals = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
+
+    assert not raycasting_attack(a5, Color.WHITE, PieceType.ROOK, board, on_same_file)
+    assert not raycasting_attack(a5, Color.BLACK, PieceType.ROOK, board, on_same_rank)
+    assert not raycasting_attack(a5, Color.WHITE, PieceType.ROOK, board, diagonals)
+    assert not raycasting_attack(a5, Color.BLACK, PieceType.PAWN, board, on_same_rank)
+
+
+def test_raycasting_attack_w_attacker_on_same_file() -> None:
+    """
+    Black rook on A8 should be able to attack squares on the a-file, or on the 8th rank.
+    Test that raycasting algorithm correctly finds the enemy piece on the file, that is of the correct type and color.
+    """
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a5 = Square.from_algebraic("a5")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    a8 = Square.from_algebraic("a8")
+    board.place_piece(black_rook, a8)
+
+    on_same_rank = [(1, 0), (-1, 0)]
+    on_same_file = [(0, 1), (0, -1)]
+
+    # a5 is under attack by a8:
+    assert raycasting_attack(a5, Color.BLACK, PieceType.ROOK, board, on_same_file)
+
+    # a5 is not under attack by anything on the 5th rank
+    assert not raycasting_attack(a5, Color.BLACK, PieceType.ROOK, board, on_same_rank)
+
+    # a5 is under attack by a BLACK rook
+    assert not raycasting_attack(a5, Color.WHITE, PieceType.ROOK, board, on_same_file)
+
+    # a5 is under attack by a black ROOK
+    assert not raycasting_attack(a5, Color.BLACK, PieceType.QUEEN, board, on_same_file)
+
+
+def test_raycasting_attack_w_blocker_on_same_file() -> None:
+    """
+    Block the attack by placing an additional friendly piece in between the attacker and the first piece.
+    """
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a5 = Square.from_algebraic("a5")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    a8 = Square.from_algebraic("a8")
+    board.place_piece(black_rook, a8)
+
+    # blocker
+    white_rook = Piece.from_fen("R")
+    a6 = Square.from_algebraic("a6")
+    board.place_piece(white_rook, a6)
+    on_same_file = [(0, 1), (0, -1)]
+
+    # a8 cannot attack a5 due to blocker on a6:
+    assert not raycasting_attack(a5, Color.BLACK, PieceType.ROOK, board, on_same_file)
+
+
+def test_raycasting_attack_w_attacker_on_same_rank() -> None:
+    """
+    Check raycasting correctly identifies an attacker located on the same rank
+    NOTE: Piece type does not matter for this unit test
+    """
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a5 = Square.from_algebraic("a5")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    e5 = Square.from_algebraic("e5")
+    board.place_piece(black_rook, e5)
+
+    on_same_rank = [(1, 0), (-1, 0)]
+    # a5 attacked by piece on the same rank (e5)
+    assert raycasting_attack(a5, Color.BLACK, PieceType.ROOK, board, on_same_rank)
+
+
+def test_raycasting_attack_w_blocker_on_same_rank() -> None:
+    """
+    Block the attack by placing an additional friendly piece in between the attacker and the first piece.
+    """
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a5 = Square.from_algebraic("a5")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    e5 = Square.from_algebraic("e5")
+    board.place_piece(black_rook, e5)
+
+    # blocker
+    white_pawn = Piece.from_fen("P")
+    c5 = Square.from_algebraic("c5")
+    board.place_piece(white_pawn, c5)
+    on_same_rank = [(1, 0), (-1, 0)]
+
+    # e5 cannot attack a5 due to blocker on c5:
+    assert not raycasting_attack(a5, Color.BLACK, PieceType.ROOK, board, on_same_rank)
+
+
+def test_raycasting_attack_w_attacker_on_same_diagonal() -> None:
+    """
+    Check raycasting correctly identifies an attacker located on the same diagonal
+    NOTE: Piece type does not matter for this unit test
+    """
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a1 = Square.from_algebraic("a1")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    e5 = Square.from_algebraic("e5")
+    board.place_piece(black_rook, e5)
+
+    diagonals = [(1, 1), (-1, 1), (-1, 1), (-1, -1)]
+    # Enemy piece e5 sees a1 on the same diagonal
+    assert raycasting_attack(a1, Color.BLACK, PieceType.ROOK, board, diagonals)
+
+
+def test_raycasting_attack_w_blocker_on_same_diagonal() -> None:
+    """
+    Block the attack by placing an additional friendly piece in between the attacker and the first piece.
+    """
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a1 = Square.from_algebraic("a1")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    e5 = Square.from_algebraic("e5")
+    board.place_piece(black_rook, e5)
+
+    # blocker
+    white_bishop = Piece.from_fen("B")
+    c3 = Square.from_algebraic("c3")
+    board.place_piece(white_bishop, c3)
+
+    diagonals = [(1, 1), (-1, 1), (-1, 1), (-1, -1)]
+    # Enemy piece e5 no longer sees a1  because of piece in between them on the same diagonal
+    assert not raycasting_attack(a1, Color.BLACK, PieceType.ROOK, board, diagonals)
+
+
+def test_raycasting_attack_wrong_color() -> None:
+    """Check that raycasting checks for the piece color."""
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a5 = Square.from_algebraic("a5")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    a8 = Square.from_algebraic("a8")
+    board.place_piece(black_rook, a8)
+
+    on_same_file = [(0, 1), (0, -1)]
+
+    # a5 is under attack by a BLACK rook
+    assert not raycasting_attack(a5, Color.WHITE, PieceType.ROOK, board, on_same_file)
+
+
+def test_raycasting_attack_wrong_piece_type() -> None:
+    """Check that raycasting checks for the piece type."""
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a5 = Square.from_algebraic("a5")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    a8 = Square.from_algebraic("a8")
+    board.place_piece(black_rook, a8)
+
+    on_same_file = [(0, 1), (0, -1)]
+
+    # a5 is under attack by a BLACK rook
+    assert not raycasting_attack(a5, Color.WHITE, PieceType.PAWN, board, on_same_file)
+    assert not raycasting_attack(a5, Color.WHITE, PieceType.BISHOP, board, on_same_file)
+    assert not raycasting_attack(a5, Color.WHITE, PieceType.KNIGHT, board, on_same_file)
+
+
+def test_single_step_attack() -> None:
+    """
+    Find the attacker
+    NOTE: piece type does not matter for testing this logic (only color w.r.t other squares matters)
+    """
+
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    c2 = Square.from_algebraic("c2")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    a6 = Square.from_algebraic("a6")
+    board.place_piece(black_rook, a6)
+
+    step = [(-2, 4)]
+    assert single_step_attack(c2, Color.BLACK, PieceType.ROOK, board, step)
+
+
+def test_single_step_attack_blocker_does_not_matter() -> None:
+    """
+    As this function will be used only for PAWNS/KINGS (that move to adjacent squares) and knights (which are allowed to jump over pieces)
+    blocker should not matter.
+    NOTE: Again tested this with an artificial attacking rule
+    """
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    c2 = Square.from_algebraic("c2")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    a2 = Square.from_algebraic("a2")
+    board.place_piece(black_rook, a2)
+
+    # "blocker"
+    white_rook = Piece.from_fen("R")
+    b2 = Square.from_algebraic("b2")
+    board.place_piece(white_rook, b2)
+
+    step = [(-2, 0)]
+    assert single_step_attack(c2, Color.BLACK, PieceType.ROOK, board, step)
+
+
+def test_single_step_attack_wrong_color() -> None:
+    """Check attacker must be of specified color"""
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    c2 = Square.from_algebraic("c2")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    a2 = Square.from_algebraic("a2")
+    board.place_piece(black_rook, a2)
+
+    step = [(-2, 0)]
+    assert not single_step_attack(c2, Color.WHITE, PieceType.ROOK, board, step)
+
+
+def test_single_step_attack_wrong_piece_type() -> None:
+    """Check attacker must be of specified piece type"""
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    c2 = Square.from_algebraic("c2")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    a2 = Square.from_algebraic("a2")
+    board.place_piece(black_rook, a2)
+
+    step = [(-2, 0)]
+    assert not single_step_attack(c2, Color.BLACK, PieceType.PAWN, board, step)
+    assert not single_step_attack(c2, Color.BLACK, PieceType.BISHOP, board, step)
+    assert not single_step_attack(c2, Color.BLACK, PieceType.QUEEN, board, step)
+
+
+def test_bishop_attack() -> None:
+    """
+    Test methods are called correctly + bishops take diagonally
+    """
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a1 = Square.from_algebraic("a1")
+
+    # attacker
+    black_rook = Piece.from_fen("b")
+    e5 = Square.from_algebraic("e5")
+    board.place_piece(black_rook, e5)
+
+    diagonals = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+
+    # check wiring and logic for good measure
+    with patch.object(mv, "raycasting_attack") as mock_raycasting:
+        is_attacked_by_bishop(a1, Color.BLACK, board)
+        mock_raycasting.assert_called_once()
+
+        args, _ = mock_raycasting.call_args
+        assert args[0] == a1
+        assert args[1] == Color.BLACK
+        assert args[2] == PieceType.BISHOP
+        assert args[3] == board
+        assert set(args[4]) == set(diagonals)
+
+    # ensure behavior is correct:
+    assert is_attacked_by_bishop(a1, Color.BLACK, board)
+
+
+def test_rook_attack() -> None:
+    """Test methods are called correctly + rooks take either horizontally or vertically"""
+
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a1 = Square.from_algebraic("a1")
+
+    # attacker
+    black_rook = Piece.from_fen("r")
+    e1 = Square.from_algebraic("e1")
+    board.place_piece(black_rook, e1)
+
+    on_same_file = [(0, 1), (0, -1)]
+    on_same_rank = [(-1, 0), (1, 0)]
+    straights = on_same_file + on_same_rank
+    with patch.object(mv, "raycasting_attack") as mock_raycasting:
+        is_attacked_by_rook(a1, Color.BLACK, board)
+        mock_raycasting.assert_called_once()
+        args, _ = mock_raycasting.call_args
+        assert args[0] == a1
+        assert args[1] == Color.BLACK
+        assert args[2] == PieceType.ROOK
+        assert args[3] == board
+        assert set(args[4]) == set(straights)
+
+    # ensure behavior is correct:
+    assert is_attacked_by_rook(a1, Color.BLACK, board)
+
+
+def test_queen_attack() -> None:
+    """Test methods are called correctly + Queens can take like rooks and like bishops"""
+
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a1 = Square.from_algebraic("a1")
+
+    # attacker
+    black_queen = Piece.from_fen("q")
+    e1 = Square.from_algebraic("e1")
+    board.place_piece(black_queen, e1)
+
+    on_same_file = [(0, 1), (0, -1)]
+    on_same_rank = [(1, 0), (-1, 0)]
+    diagonals = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
+    straights = on_same_rank + on_same_file
+    with patch.object(mv, "raycasting_attack") as mock_raycasting:
+        is_attacked_by_queen(a1, Color.BLACK, board)
+        mock_raycasting.assert_called()
+        assert mock_raycasting.call_count <= 2
+        if mock_raycasting.call_count == 2:
+            mock_raycasting.assert_has_calls(
+                [
+                    call(a1, Color.BLACK, PieceType.QUEEN, board, diagonals),
+                    call(a1, Color.BLACK, PieceType.QUEEN, board, straights),
+                ],
+                any_order=True,
+            )
+        elif mock_raycasting.call_count == 1:
+            args, _ = mock_raycasting.call_args
+            assert args[0] == a1
+            assert args[1] == Color.BLACK
+            assert args[2] == PieceType.QUEEN
+            assert args[3] == board
+            assert set(args[4]) == set(straights + diagonals)
+
+    # ensure behavior is correct:
+    assert is_attacked_by_queen(a1, Color.BLACK, board)
+
+
+def test_knight_attack() -> None:
+    """Test methods are called correctly + knights take moving in L-shapes"""
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a1 = Square.from_algebraic("a1")
+
+    # attacker
+    black_knight = Piece.from_fen("n")
+    b3 = Square.from_algebraic("b3")
+    board.place_piece(black_knight, b3)
+
+    L_shaped = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)]
+
+    # check wiring
+    with patch.object(mv, "single_step_attack") as mock_single_step:
+        is_attacked_by_knight(a1, Color.BLACK, board)
+        mock_single_step.assert_called_once_with(
+            a1, Color.BLACK, PieceType.KNIGHT, board, L_shaped
+        )
+
+    # ensure behavior is correct:
+    assert is_attacked_by_knight(a1, Color.BLACK, board)
+
+
+def test_king_attack() -> None:
+    """Test methods are called correctly + king can take on adjacent square."""
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    a1 = Square.from_algebraic("a1")
+
+    # attacker
+    black_king = Piece.from_fen("k")
+    b2 = Square.from_algebraic("b2")
+    board.place_piece(black_king, b2)
+
+    adjacent_squares = [
+        (0, 1),
+        (0, -1),
+        (1, 0),
+        (-1, 0),
+        (1, 1),
+        (1, -1),
+        (-1, 1),
+        (-1, -1),
+    ]
+
+    # check wiring
+    with patch.object(mv, "single_step_attack") as mock_single_step:
+        is_attacked_by_king(a1, Color.BLACK, board)
+        mock_single_step.assert_called_once_with(
+            a1, Color.BLACK, PieceType.KING, board, adjacent_squares
+        )
+
+    # ensure behavior is correct:
+    assert is_attacked_by_king(a1, Color.BLACK, board)
+
+
+def test_white_pawn_attack() -> None:
+    """Test methods are called correctly + white pawns take diagonally while moving UP the board"""
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    c3 = Square.from_algebraic("c3")
+
+    # attacker
+    white_pawn = Piece.from_fen("P")
+    b2 = Square.from_algebraic("b2")
+    board.place_piece(white_pawn, b2)
+
+    white_pawn_take = [(-1, 1), (1, 1)]
+    inverse_takes = [(f * -1, r * -1) for (f, r) in white_pawn_take]
+
+    # check wiring
+    with patch.object(mv, "single_step_attack") as mock_single_step:
+        is_attacked_by_pawn(c3, Color.WHITE, board)
+        mock_single_step.assert_called_once_with(
+            c3, Color.WHITE, PieceType.PAWN, board, inverse_takes
+        )
+
+    # ensure behavior is correct:
+    assert is_attacked_by_pawn(c3, Color.WHITE, board)
+
+
+def test_black_pawn_attack() -> None:
+    """Test methods are called correctly + white pawns take diagonally while moving UP the board"""
+    board = Board.from_fen(EMPTY_FEN)
+
+    # square under investigation
+    c3 = Square.from_algebraic("c3")
+
+    # attacker
+    black_pawn = Piece.from_fen("p")
+    d4 = Square.from_algebraic("d4")
+    board.place_piece(black_pawn, d4)
+
+    black_pawn_take = [(-1, -1), (1, -1)]
+    inverse_takes = [(f * -1, r * -1) for (f, r) in black_pawn_take]
+
+    # check wiring
+    with patch.object(mv, "single_step_attack") as mock_single_step:
+        is_attacked_by_pawn(c3, Color.BLACK, board)
+        mock_single_step.assert_called_once_with(
+            c3, Color.BLACK, PieceType.PAWN, board, inverse_takes
+        )
+
+    # ensure behavior is correct:
+    assert is_attacked_by_pawn(c3, Color.BLACK, board)
