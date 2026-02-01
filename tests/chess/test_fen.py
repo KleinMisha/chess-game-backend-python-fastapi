@@ -284,3 +284,32 @@ def test_canonical_castling_rules(
     rule = CASTLING_RULES[direction]
     expected = CastlingSquares.from_algebraic(k_from, k_to, r_from, r_to)
     assert expected == rule
+
+
+@pytest.mark.parametrize("direction", [d for d in CastlingDirection])
+def test_revoking_specific_castling_rights(direction: CastlingDirection) -> None:
+    """make sure only the specified rights get revoked"""
+    # the game will start with all rights preserved
+    fen = FENState.starting_position()
+    assert fen.castling_rights == {d: True for d in CastlingDirection}
+
+    # revoke rights
+    fen.revoke_castling_rights(direction)
+    assert fen.castling_rights == {
+        d: True if d != direction else False for d in CastlingDirection
+    }
+
+
+@pytest.mark.parametrize("color", [Color.WHITE, Color.BLACK])
+def test_revoking_all_rights(color: Color) -> None:
+    """Make sure all rights get revoked"""
+    # the game will start with all rights preserved
+    fen = FENState.starting_position()
+    assert fen.castling_rights == {d: True for d in CastlingDirection}
+
+    # revoke rights
+    fen.revoke_all_castling_rights(color)
+    assert fen.castling_rights == {
+        d: False if color.name.lower() in d.name.lower() else True
+        for d in CastlingDirection
+    }

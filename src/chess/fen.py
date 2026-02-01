@@ -294,3 +294,33 @@ class FENState:
     @classmethod
     def starting_position(cls) -> Self:
         return cls.from_fen(STARTING_FEN)
+
+    def revoke_castling_rights(self, direction: CastlingDirection) -> None:
+        """
+        Revoke the right to castle in the given direction.
+        ----
+        NOTE: Chess doesn't allow a player to regain these rights for the remainder of the game
+        """
+        self.castling_rights[direction] = False
+
+    def revoke_all_castling_rights(self, color: Color) -> None:
+        """Revoke both directions"""
+        if color == Color.WHITE:
+            self.revoke_castling_rights(CastlingDirection.WHITE_KING_SIDE)
+            self.revoke_castling_rights(CastlingDirection.WHITE_QUEEN_SIDE)
+
+        elif color == Color.BLACK:
+            self.revoke_castling_rights(CastlingDirection.BLACK_KING_SIDE)
+            self.revoke_castling_rights(CastlingDirection.BLACK_QUEEN_SIDE)
+
+    def reset_half_move_counter(self) -> None:
+        """Convenience method"""
+        self.half_move_clock = 0
+
+    def increment_half_move_counter(self) -> None:
+        """Convenience method"""
+        self.half_move_clock += 1
+
+    def increment_full_move_counter(self) -> None:
+        """Convenience method"""
+        self.num_turns += 1
