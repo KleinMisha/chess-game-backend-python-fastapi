@@ -346,6 +346,45 @@ def test_locating_color(player_color: Color) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "color, king_square",
+    [(color, sq) for color in [Color.BLACK, Color.WHITE] for sq in ["a1", "d4", "d8"]],
+)
+def test_finding_the_king(color: PieceColors, king_square: str) -> None:
+    """Make sure you locate the king of the specified color at the correct location"""
+
+    # set up the board with the king on the correct location
+    board = Board.from_fen(EMPTY_FEN)
+    expected_square = Square.from_algebraic(king_square)
+    expected_king = Piece(PieceType.KING, color)
+    board.place_piece(expected_king, expected_square)
+
+    # add the other piece at some other location
+    h8 = Square.from_algebraic("h8")
+    opposite_color = Color.WHITE if color == Color.BLACK else Color.BLACK
+    wrong_king = Piece(PieceType.KING, opposite_color)
+    board.place_piece(wrong_king, h8)
+
+    # add some additional decoys on the board
+    f3 = Square.from_algebraic("f3")
+    f2 = Square.from_algebraic("f2")
+    a2 = Square.from_algebraic("a2")
+    black_pawn = Piece.from_fen("p")
+    white_bishop = Piece.from_fen("B")
+    white_queen = Piece.from_fen("Q")
+    board.place_piece(black_pawn, f3)
+    board.place_piece(white_bishop, f2)
+    board.place_piece(white_queen, a2)
+
+    # locate the king
+    found_square = board.king_square(color)
+    assert found_square == expected_square
+
+    # make sure it is the actual piece we intend to find
+    found_piece = board.piece(found_square)
+    assert found_piece == expected_king
+
+
 # --- PIECE MOVEMENTS / BOARD UPDATES ---
 @pytest.mark.parametrize("uci_move", ["e2e4", "a1a5", "d2e4", "g3a7"])
 def test_single_move_updates(uci_move: str) -> None:
@@ -433,7 +472,7 @@ def test_generating_candidate_moves(
 
 
 # -- ATTACK DETECTION --
-@pytest.mark.parametrize("color", [color for color in [Color.WHITE, Color.BLACK]])
+@pytest.mark.parametrize("color", [Color.WHITE, Color.BLACK])
 def test_attack_detection(
     color: PieceColors,
     patch_attack_rule_functions: Callable[
@@ -454,6 +493,23 @@ def test_attack_detection(
             if pt == PieceType.EMPTY:
                 continue
             mock_fns[pt].assert_called_once()
+
+
+@pytest.mark.parametrize("color", [Color.WHITE, Color.BLACK])
+def test_check_detection(color: PieceColors) -> None:
+    """Make sure Board.is_check() calls the correct methods. Attack detection logic already tested."""
+
+    board = Board.from_fen(EMPTY_FEN)
+    opposite_color = Color.BLACK if color == Color.WHITE else Color.WHITE
+    with (
+        patch.object(board, attribute="is_square_attacked") as mock_attack_detection,
+        patch.object(
+            board, attribute="king_square", return_value="king_square"
+        ) as mock_king_finder,
+    ):
+        board.is_check(color)
+        mock_king_finder.assert_called_once_with(color)
+        mock_attack_detection.assert_called_once_with("king_square", opposite_color)
 
 
 # -- ENCODING BOARD IN FEN --

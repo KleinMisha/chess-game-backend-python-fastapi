@@ -4,7 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Self
 
-from src.chess.moves import MOVEMENT_RULES, CandidateMovesFn, Move
+from src.chess.moves import ATTACK_RULES, MOVEMENT_RULES, Move
 from src.chess.pieces import Color, Piece, PieceType
 from src.chess.square import BOARD_DIMENSIONS, Square
 
@@ -74,6 +74,10 @@ class Board:
             fen_characters.append(str(empty_count))
         return "".join(fen_characters)
 
+    def place_piece(self, piece: Piece, square: Square) -> None:
+        """Convenience method to make tests easier."""
+        self.position[square] = piece
+
     def piece(self, square: Square) -> Piece:
         return self.position[square]
 
@@ -88,6 +92,14 @@ class Board:
         return [
             square for square, piece in self.position.items() if piece.color == color
         ]
+
+    def king_square(self, color: Color) -> Square:
+        """Convenience method: Need this to determine if the current position the king is in check."""
+        both_king_squares = self.locate_pieces(PieceType.KING)
+        both_kings = [self.piece(square) for square in both_king_squares]
+        first_king_square, second_king_square = both_king_squares
+        first_king, _ = both_kings
+        return first_king_square if first_king.color == color else second_king_square
 
     def empty_squares(self) -> list[Square]:
         """Convenience method: Will call this one the most probably"""
@@ -107,7 +119,7 @@ class Board:
         same_color_pieces_loc = self.locate_color(color)
         for starting_square in same_color_pieces_loc:
             piece_type = self.piece(starting_square).type
-            movement_rule: CandidateMovesFn = MOVEMENT_RULES[piece_type]
+            movement_rule = MOVEMENT_RULES[piece_type]
             piece_moves = movement_rule(starting_square, current_board)
             candidate_moves.extend(piece_moves)
         return candidate_moves
@@ -122,6 +134,22 @@ class Board:
         """convenience method to apply multiple moves (if you quickly want to start a board in a given position reached after some moves)"""
         for move in moves:
             self.move_piece(move)
+
+    def is_square_attacked(self, square: Square, by_color: Color) -> bool:
+        """
+        Is the specified square under attack by any piece of the specified color?
+        """
+        current_board = deepcopy(self)
+        return any(
+            ATTACK_RULES[piece_type](square, by_color, current_board)
+            for piece_type in ATTACK_RULES
+        )
+
+    def is_check(self, color: Color) -> bool:
+        """Is the King of the specified color under attack in the current board position?"""
+        king_square = self.king_square(color)
+        opponent_color = Color.WHITE if color == Color.BLACK else Color.BLACK
+        return self.is_square_attacked(king_square, opponent_color)
 
     def count_material(self) -> dict[Color, int]:
         """Tally the points of material each player has on the board"""
