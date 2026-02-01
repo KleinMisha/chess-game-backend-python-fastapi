@@ -414,3 +414,38 @@ def castling_king_squares(direction: CastlingDirection) -> tuple[Square, Square]
 def castling_rook_squares(direction: CastlingDirection) -> tuple[Square, Square]:
     rule = CASTLING_RULES[direction]
     return rule.rook_from, rule.rook_to
+
+
+def squares_between_on_rank(from_square: Square, to_square: Square) -> list[Square]:
+    """
+    Find the squares in between the two squares specified that are on the same rank
+
+    Needed for checking if you can still castle (the Board will check which of those are empty etc.)
+
+    """
+
+    if from_square.rank != to_square.rank:
+        raise ValueError(
+            f"squares_between_on_rank requires both squares to lie on the same rank. \n from: {from_square}\n to:{to_square}"
+        )
+
+    difference_in_files = to_square.file - from_square.file
+    search_direction: Vector = (1, 0) if difference_in_files > 0 else (-1, 0)
+    squares_found: list[Square] = []
+    df, _ = search_direction
+    square = from_square
+    while True:
+        file = square.file
+        rank = square.rank
+        file += df
+        try_square = Square(file, rank)
+        if try_square == to_square:
+            break
+
+        if not try_square.is_within_bounds():
+            break
+
+        squares_found.append(try_square)
+        square = try_square
+
+    return squares_found

@@ -28,6 +28,7 @@ from src.chess.moves import (
     raycasting_move,
     single_step_attack,
     single_step_move,
+    squares_between_on_rank,
 )
 from src.chess.square import BOARD_DIMENSIONS
 
@@ -907,3 +908,77 @@ def test_black_pawn_attack() -> None:
 
     # ensure behavior is correct:
     assert is_attacked_by_pawn(c3, Color.BLACK, board)
+
+
+# -- CASTLING RULES --
+
+
+def test_squares_between_on_rank_higher_rank() -> None:
+    """check the algorithm correctly identifies the squares to the right"""
+    a1 = Square.from_algebraic("a1")
+    b1 = Square.from_algebraic("b1")
+    c1 = Square.from_algebraic("c1")
+    d1 = Square.from_algebraic("d1")
+    e1 = Square.from_algebraic("e1")
+    f1 = Square.from_algebraic("f1")
+    g1 = Square.from_algebraic("g1")
+    h1 = Square.from_algebraic("h1")
+
+    # first check from board edge to board edge
+    squares_found = squares_between_on_rank(a1, h1)
+    assert len(squares_found) == 6
+    assert set(squares_found) == {b1, c1, d1, e1, f1, g1}
+
+    # now check for two intermediate squares
+    squares_found = squares_between_on_rank(b1, e1)
+    assert len(squares_found) == 2
+    assert set(squares_found) == {c1, d1}
+
+
+def test_squares_between_rank_lower_rank() -> None:
+    """check the algorithm correctly identifies the squares to the left"""
+    a1 = Square.from_algebraic("a1")
+    b1 = Square.from_algebraic("b1")
+    c1 = Square.from_algebraic("c1")
+    d1 = Square.from_algebraic("d1")
+    e1 = Square.from_algebraic("e1")
+    f1 = Square.from_algebraic("f1")
+    g1 = Square.from_algebraic("g1")
+    h1 = Square.from_algebraic("h1")
+
+    # first check from board edge to board edge
+    squares_found = squares_between_on_rank(h1, a1)
+    assert len(squares_found) == 6
+    assert set(squares_found) == {b1, c1, d1, e1, f1, g1}
+
+    # now check for two intermediate squares
+    squares_found = squares_between_on_rank(g1, d1)
+    assert len(squares_found) == 2
+    assert set(squares_found) == {e1, f1}
+
+
+def test_squares_between_symmetry() -> None:
+    """Squares between a and b should also be squares between b and a."""
+
+    b6 = Square.from_algebraic("b6")
+    g6 = Square.from_algebraic("g6")
+
+    b_to_g = squares_between_on_rank(b6, g6)
+    g_to_b = squares_between_on_rank(g6, b6)
+    assert set(b_to_g) == set(g_to_b)
+
+
+def test_no_squares_between_adjacent_files() -> None:
+    """Two adjacent squares have no intervening square(s)."""
+    a8 = Square.from_algebraic("a8")
+    b8 = Square.from_algebraic("b8")
+    squares_found = squares_between_on_rank(a8, b8)
+    assert squares_found == []
+
+
+def test_between_squares_on_rank_invalid() -> None:
+    """Squares not on the same rank? Should raise a ValueError"""
+    a8 = Square.from_algebraic("a8")
+    c5 = Square.from_algebraic("c5")
+    with pytest.raises(ValueError):
+        squares_between_on_rank(a8, c5)
