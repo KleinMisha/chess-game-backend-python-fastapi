@@ -433,8 +433,6 @@ def test_generating_candidate_moves(
 
 
 # -- ATTACK DETECTION --
-
-
 @pytest.mark.parametrize("color", [color for color in [Color.WHITE, Color.BLACK]])
 def test_attack_detection(
     color: PieceColors,
@@ -444,7 +442,7 @@ def test_attack_detection(
 ) -> None:
     """Test strategy pattern is implemented properly. Checks you attempt attack detection for every piece type once."""
 
-    # on an empty board we should for sure call all the strategies once
+    # on an empty board we should for sure call all the strategies
     board = Board.from_fen(EMPTY_FEN)
     a1 = Square.from_algebraic("a1")
     patch_ctx, mock_fns = patch_attack_rule_functions()
