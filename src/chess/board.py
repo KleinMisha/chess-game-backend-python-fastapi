@@ -160,6 +160,14 @@ class Board:
         opponent_color = Color.WHITE if color == Color.BLACK else Color.BLACK
         return self.is_square_attacked(king_square, opponent_color)
 
+    def promote_piece(self, square: Square, to: PieceType) -> None:
+        """
+        Promote the piece on the given square to the specified type
+        NOTE: It is assumed this function is only called for pawns (using canonical chess rules.)
+        """
+        piece = self.piece(square)
+        piece.promote_to(to)
+
     def count_material(self) -> dict[Color, int]:
         """Tally the points of material each player has on the board"""
         return {

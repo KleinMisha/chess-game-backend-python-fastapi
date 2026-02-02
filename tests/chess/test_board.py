@@ -597,3 +597,25 @@ def test_writing_board_to_fen(fen: str) -> None:
     """Check if parsing the dictionary of pieces correctly converted back into the FEN string"""
     board = Board.from_fen(fen)
     assert board.to_fen() == fen
+
+
+# -- PIECE PROMOTION --
+@pytest.mark.parametrize(
+    "new_type", [PieceType.BISHOP, PieceType.KNIGHT, PieceType.ROOK, PieceType.QUEEN]
+)
+def test_pawn_promotions(new_type: PieceType) -> None:
+    """Check that after promotion the piece on that square has changed
+
+    NOTE: While the method tested technically does not care about this being a legal promotion,
+    will use that as test case anyways for simplicity. You will not use the promotion option in any other case anyways (in a regular chess game).
+    """
+    # prepare board with pawn on promotion square
+    board = Board.from_fen(EMPTY_FEN)
+    a8 = Square.from_algebraic("a8")
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    board.place_piece(white_pawn, a8)
+
+    # perform promotion and test
+    board.promote_piece(a8, to=new_type)
+    piece_on_a8 = board.piece(a8)
+    assert piece_on_a8.type == new_type
