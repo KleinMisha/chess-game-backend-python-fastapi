@@ -305,13 +305,14 @@ class FENState:
 
     def revoke_all_castling_rights(self, color: Color) -> None:
         """Revoke both directions"""
-        if color == Color.WHITE:
-            self.revoke_castling_rights(CastlingDirection.WHITE_KING_SIDE)
-            self.revoke_castling_rights(CastlingDirection.WHITE_QUEEN_SIDE)
+        castling_options = self.castling_options(color)
+        for direction in castling_options:
+            self.revoke_castling_rights(direction)
 
-        elif color == Color.BLACK:
-            self.revoke_castling_rights(CastlingDirection.BLACK_KING_SIDE)
-            self.revoke_castling_rights(CastlingDirection.BLACK_QUEEN_SIDE)
+    def can_castle(self, color: Color) -> bool:
+        """Check at least one of the castling options for the specified color are possible"""
+        castling_options = self.castling_options(color)
+        return any(self.castling_rights[direction] for direction in castling_options)
 
     def reset_half_move_counter(self) -> None:
         """Convenience method"""
@@ -324,3 +325,11 @@ class FENState:
     def increment_full_move_counter(self) -> None:
         """Convenience method"""
         self.num_turns += 1
+
+    def castling_options(self, color: Color) -> list[CastlingDirection]:
+        """the castling directions corresponding to a particular color"""
+        return [
+            direction
+            for direction in CastlingDirection
+            if color.name.lower() in direction.name.lower()
+        ]
