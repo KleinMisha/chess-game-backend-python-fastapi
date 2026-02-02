@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.chess.castling import CastlingDirection, CastlingSquares
+from src.chess.castling import CastlingDirection
 from src.chess.fen import (
     VALID_CASTLING_ENCODINGS,
     FENState,
