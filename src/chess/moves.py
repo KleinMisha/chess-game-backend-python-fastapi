@@ -470,3 +470,34 @@ def squares_between_on_rank(from_square: Square, to_square: Square) -> list[Squa
 def candidate_castling_move(direction: CastlingDirection) -> Move:
     king_from, king_to = castling_king_squares(direction)
     return Move(king_from, king_to, castling_direction=direction)
+
+
+# -- EN PASSANT MOVES ---
+def en_passant_moves(
+    en_passant_square: Square, color: Color, board: Board
+) -> list[Move]:
+    """Given a target en passant square, check the adjacent files (in the rank one up/down from the en passant square) for pawns of the correct color."""
+
+    # white moves UP the board, black moves DOWN:
+    # NOTE: En passant square is indication of the opponent's pawn.
+    opposite_direction = -1 if color == Color.WHITE else 1
+
+    # if there is a pawn on the adjacent file: Add this move to the list
+    moves: list[Move] = []
+    for df in [-1, 1]:
+        maybe_pawn_square = Square(
+            file=en_passant_square.file + df,
+            rank=en_passant_square.rank + opposite_direction,
+        )
+        piece_on_square = board.piece(maybe_pawn_square)
+        own_pawn = Piece(PieceType.PAWN, color)
+        if piece_on_square == own_pawn:
+            moves.append(
+                Move(
+                    from_square=maybe_pawn_square,
+                    to_square=en_passant_square,
+                    is_en_passant=True,
+                )
+            )
+
+    return moves

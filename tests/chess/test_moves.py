@@ -23,6 +23,7 @@ from src.chess.moves import (
     candidate_queen_moves,
     candidate_rook_moves,
     castling_king_squares,
+    en_passant_moves,
     is_attacked_by_bishop,
     is_attacked_by_king,
     is_attacked_by_knight,
@@ -1023,3 +1024,81 @@ def test_candidate_castling_moves(direction: CastlingDirection) -> None:
     assert castling_move.from_square == king_from
     assert castling_move.to_square == king_to
     assert castling_move.castling_direction == direction
+
+
+# -- EN PASSANT RULE ---
+
+
+def test_single_valid_en_passant_move_white() -> None:
+    """Should return a single en-passant move. Check scenario for playing with WHITE pieces"""
+    # place single pawn on the 5th rank (simulating that black just moved their pawn by two squares)
+    board = Board.from_fen(EMPTY_FEN)
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+
+    d6 = Square.from_algebraic("d6")
+    e5 = Square.from_algebraic("e5")
+    board.place_piece(white_pawn, e5)
+
+    expected_moves: list[Move] = [
+        Move(from_square=e5, to_square=d6, is_en_passant=True)
+    ]
+    moves_found = en_passant_moves(d6, Color.WHITE, board)
+    assert moves_found == expected_moves
+
+
+def test_single_valid_en_passant_move_black() -> None:
+    """Should return a single en-passant move. Check scenario for playing with BLACK pieces"""
+    # place single pawn on the 4th rank (simulating that white just moved their pawn by two squares)
+    board = Board.from_fen(EMPTY_FEN)
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+
+    d3 = Square.from_algebraic("d3")
+    e4 = Square.from_algebraic("e4")
+    board.place_piece(black_pawn, e4)
+
+    expected_moves: list[Move] = [
+        Move(from_square=e4, to_square=d3, is_en_passant=True)
+    ]
+    moves_found = en_passant_moves(d3, Color.BLACK, board)
+    assert moves_found == expected_moves
+
+
+def test_two_valid_en_passant_moves_white() -> None:
+    """Should return two moves if there are pawns on both adjacent files"""
+    board = Board.from_fen(EMPTY_FEN)
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+
+    d6 = Square.from_algebraic("d6")
+    e5 = Square.from_algebraic("e5")
+    c5 = Square.from_algebraic("c5")
+    board.place_piece(white_pawn, e5)
+    board.place_piece(white_pawn, c5)
+
+    expected_moves: list[Move] = [
+        Move(from_square=e5, to_square=d6, is_en_passant=True),
+        Move(from_square=c5, to_square=d6, is_en_passant=True),
+    ]
+    moves_found = en_passant_moves(d6, Color.WHITE, board)
+    assert len(moves_found) == len(expected_moves)
+    assert all(move in expected_moves for move in moves_found)
+
+
+def test_two_valid_en_passant_moves_black() -> None:
+    """Should return two moves if there are pawns on both adjacent files"""
+    """Should return a single en-passant move. Check scenario for playing with BLACK pieces"""
+    board = Board.from_fen(EMPTY_FEN)
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+
+    d3 = Square.from_algebraic("d3")
+    e4 = Square.from_algebraic("e4")
+    c4 = Square.from_algebraic("c4")
+    board.place_piece(black_pawn, e4)
+    board.place_piece(black_pawn, c4)
+
+    expected_moves: list[Move] = [
+        Move(from_square=c4, to_square=d3, is_en_passant=True),
+        Move(from_square=e4, to_square=d3, is_en_passant=True),
+    ]
+    moves_found = en_passant_moves(d3, Color.BLACK, board)
+    assert len(moves_found) == len(expected_moves)
+    assert all(move in expected_moves for move in moves_found)
