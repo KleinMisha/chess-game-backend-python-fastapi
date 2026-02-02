@@ -8,6 +8,7 @@ import src.chess.moves as mv
 from src.chess.board import Board
 from src.chess.moves import (
     CASTLING_RULES,
+    PROMOTION_OPTIONS,
     CastlingDirection,
     CastlingSquares,
     Color,
@@ -30,6 +31,8 @@ from src.chess.moves import (
     is_attacked_by_pawn,
     is_attacked_by_queen,
     is_attacked_by_rook,
+    is_pawn_push_to_promotion_square,
+    pawn_pushes_w_promotion,
     raycasting_attack,
     raycasting_move,
     single_step_attack,
@@ -1027,8 +1030,6 @@ def test_candidate_castling_moves(direction: CastlingDirection) -> None:
 
 
 # -- EN PASSANT RULE ---
-
-
 def test_single_valid_en_passant_move_white() -> None:
     """Should return a single en-passant move. Check scenario for playing with WHITE pieces"""
     # place single pawn on the 5th rank (simulating that black just moved their pawn by two squares)
@@ -1102,3 +1103,80 @@ def test_two_valid_en_passant_moves_black() -> None:
     moves_found = en_passant_moves(d3, Color.BLACK, board)
     assert len(moves_found) == len(expected_moves)
     assert all(move in expected_moves for move in moves_found)
+
+
+# -- PROMOTION RULE ---
+def test_identify_pawn_promotion_move() -> None:
+    """Check that a pawn push to the first rank (black) or final rank (white pieces) get correctly identified"""
+
+    board = Board.from_fen(EMPTY_FEN)
+
+    # place white pawn on square ready to promote
+    e7 = Square.from_algebraic("e7")
+    e8 = Square.from_algebraic("e8")
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    board.place_piece(white_pawn, e7)
+    white_pawn_push = Move(from_square=e7, to_square=e8)
+
+    # place black pawn on square ready to promote
+    e2 = Square.from_algebraic("e2")
+    e1 = Square.from_algebraic("e1")
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+    board.place_piece(black_pawn, e2)
+    black_pawn_push = Move(from_square=e2, to_square=e1)
+
+    assert is_pawn_push_to_promotion_square(white_pawn_push, board)
+    assert is_pawn_push_to_promotion_square(black_pawn_push, board)
+
+
+def test_pawn_push_not_to_promotion_square() -> None:
+    """Check that a pawn push to any other rank returns FALSE."""
+    board = Board.from_fen(EMPTY_FEN)
+    e4 = Square.from_algebraic("e4")
+    e5 = Square.from_algebraic("e5")
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    board.place_piece(white_pawn, e4)
+    white_pawn_push = Move(from_square=e4, to_square=e5)
+    assert not is_pawn_push_to_promotion_square(white_pawn_push, board)
+
+
+@pytest.mark.parametrize(
+    "piece_type",
+    [pt for pt in PieceType if pt not in [PieceType.PAWN, PieceType.EMPTY]],
+)
+def test_not_a_pawn_push_to_promotion_square(piece_type: PieceType) -> None:
+    """Check that moving any other piece type to a potential promotion square does returns FALSE"""
+    board = Board.from_fen(EMPTY_FEN)
+    e7 = Square.from_algebraic("e7")
+    e8 = Square.from_algebraic("e8")
+    white_piece = Piece(piece_type, Color.WHITE)
+    board.place_piece(white_piece, e7)
+    move_to_promotion_square = Move(from_square=e7, to_square=e8)
+    assert not is_pawn_push_to_promotion_square(move_to_promotion_square, board)
+
+
+def test_generating_promotion_moves() -> None:
+    """
+    Given a pawn push --> make sure it returns one new move for every piece type listed in the PROMOTION_OPTIONS
+
+    NOTE: This function technically does not care about the move actually being a pawn push, this is simply assumed.
+    """
+    board = Board.from_fen(EMPTY_FEN)
+    e7 = Square.from_algebraic("e7")
+    e8 = Square.from_algebraic("e8")
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    board.place_piece(white_pawn, e7)
+    white_pawn_push = Move(from_square=e7, to_square=e8)
+
+    expected_moves = [
+        Move(
+            from_square=white_pawn_push.from_square,
+            to_square=white_pawn_push.to_square,
+            promote_to=pt,
+        )
+        for pt in PROMOTION_OPTIONS
+    ]
+    promotion_moves = pawn_pushes_w_promotion(white_pawn_push)
+    assert len(promotion_moves) == len(PROMOTION_OPTIONS)
+    assert len(promotion_moves) == len(expected_moves)
+    assert all(move in expected_moves for move in promotion_moves)

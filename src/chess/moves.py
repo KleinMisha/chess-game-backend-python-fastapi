@@ -12,7 +12,7 @@ from typing import Callable, Optional, Protocol, Self
 
 from src.chess.castling import CastlingDirection, CastlingSquares
 from src.chess.pieces import FEN_TO_PIECE, PIECE_TO_FEN, Color, Piece, PieceType
-from src.chess.square import Square
+from src.chess.square import BOARD_DIMENSIONS, Square
 
 
 class Board(Protocol):
@@ -501,3 +501,33 @@ def en_passant_moves(
             )
 
     return moves
+
+
+# -- PAWN PROMOTION MOVES --
+PROMOTION_OPTIONS: list[PieceType] = [
+    PieceType.KNIGHT,
+    PieceType.BISHOP,
+    PieceType.ROOK,
+    PieceType.QUEEN,
+]
+
+
+def is_pawn_push_to_promotion_square(move: Move, board: Board) -> bool:
+    """check if the move is a pawn push and if it reaches either the first or the final rank"""
+    moving_piece = board.piece(move.from_square)
+    is_pawn_move = moving_piece.type == PieceType.PAWN
+    target_square = move.to_square
+    reaches_promotion_square = target_square.rank in [1, BOARD_DIMENSIONS[1]]
+    return is_pawn_move and reaches_promotion_square
+
+
+def pawn_pushes_w_promotion(pawn_push: Move) -> list[Move]:
+    """Return multiple copies of the pawn push with the piece type to promote into filled in."""
+    return [
+        Move(
+            from_square=pawn_push.from_square,
+            to_square=pawn_push.to_square,
+            promote_to=piece_type,
+        )
+        for piece_type in PROMOTION_OPTIONS
+    ]
