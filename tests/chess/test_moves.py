@@ -7,7 +7,9 @@ import pytest
 import src.chess.moves as mv
 from src.chess.board import Board
 from src.chess.moves import (
+    CASTLING_RULES,
     CastlingDirection,
+    CastlingSquares,
     Color,
     Move,
     Piece,
@@ -914,6 +916,33 @@ def test_black_pawn_attack() -> None:
 
 
 # -- CASTLING RULES --
+def test_castling_squares_creation() -> None:
+    """Test one case, just to have a little contract stating: 'I want to be able to create this dataclass'"""
+    castling_squares = CastlingSquares.from_algebraic("e1", "g1", "h1", "f1")
+    assert castling_squares.king_from == Square.from_algebraic("e1")
+    assert castling_squares.king_to == Square.from_algebraic("g1")
+    assert castling_squares.rook_from == Square.from_algebraic("h1")
+    assert castling_squares.rook_to == Square.from_algebraic("f1")
+
+
+@pytest.mark.parametrize(
+    "direction,k_from,k_to,r_from,r_to",
+    [
+        (CastlingDirection.WHITE_KING_SIDE, "e1", "g1", "h1", "f1"),
+        (CastlingDirection.WHITE_QUEEN_SIDE, "e1", "c1", "a1", "d1"),
+        (CastlingDirection.BLACK_KING_SIDE, "e8", "g8", "h8", "f8"),
+        (CastlingDirection.BLACK_QUEEN_SIDE, "e8", "c8", "a8", "d8"),
+    ],
+)
+def test_canonical_castling_rules(
+    direction: CastlingDirection, k_from: str, k_to: str, r_from: str, r_to: str
+) -> None:
+    """Classical castling positional changes of the king and rook."""
+    rule = CASTLING_RULES[direction]
+    expected = CastlingSquares.from_algebraic(k_from, k_to, r_from, r_to)
+    assert expected == rule
+
+
 def test_squares_between_on_rank_higher_rank() -> None:
     """check the algorithm correctly identifies the squares to the right"""
     a1 = Square.from_algebraic("a1")

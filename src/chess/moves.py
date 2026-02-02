@@ -10,7 +10,7 @@ Legality is checked later by Game
 from dataclasses import dataclass
 from typing import Callable, Optional, Protocol, Self
 
-from src.chess.fen import CASTLING_RULES, CastlingDirection
+from src.chess.castling import CastlingDirection, CastlingSquares
 from src.chess.pieces import FEN_TO_PIECE, PIECE_TO_FEN, Color, Piece, PieceType
 from src.chess.square import Square
 
@@ -405,6 +405,23 @@ ATTACK_RULES: dict[PieceType, IsAttackedFn] = {
 
 
 # -- CASTLING MOVES ---
+# The moves (in classical chess) made when castling
+CASTLING_RULES: dict[CastlingDirection, CastlingSquares] = {
+    CastlingDirection.WHITE_KING_SIDE: CastlingSquares.from_algebraic(
+        "e1", "g1", "h1", "f1"
+    ),
+    CastlingDirection.WHITE_QUEEN_SIDE: CastlingSquares.from_algebraic(
+        "e1", "c1", "a1", "d1"
+    ),
+    CastlingDirection.BLACK_KING_SIDE: CastlingSquares.from_algebraic(
+        "e8", "g8", "h8", "f8"
+    ),
+    CastlingDirection.BLACK_QUEEN_SIDE: CastlingSquares.from_algebraic(
+        "e8", "c8", "a8", "d8"
+    ),
+}
+
+
 def castling_king_squares(direction: CastlingDirection) -> tuple[Square, Square]:
     """convert the castling rule into a move of the king + the castling direction set properly"""
     rule = CASTLING_RULES[direction]

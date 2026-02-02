@@ -3,10 +3,10 @@ Representation of a single state of a chess game. The part that can be encoded i
 """
 
 from dataclasses import dataclass
-from enum import Enum
 from string import ascii_lowercase
 from typing import Optional, Self
 
+from src.chess.castling import CastlingDirection
 from src.chess.pieces import FEN_TO_PIECE, Color
 from src.chess.square import BOARD_DIMENSIONS, Square
 from src.core.exceptions import InvalidFENError
@@ -32,55 +32,7 @@ VALID_CASTLING_ENCODINGS = [
 ]
 
 
-class CastlingDirection(Enum):
-    """Rights will be revoked during the game. Enum prevents silly typos/ inconsistent naming later in the application."""
-
-    WHITE_KING_SIDE = "K"
-    WHITE_QUEEN_SIDE = "Q"
-    BLACK_KING_SIDE = "k"
-    BLACK_QUEEN_SIDE = "q"
-
-
-@dataclass(frozen=True)
-class CastlingSquares:
-    """
-    Store the squares where king/rook start from/end up in by castling.
-    NOTE: If castling rights have not been revoked, we already know the king / rook are still at their starting squares.
-    """
-
-    king_from: Square
-    king_to: Square
-    rook_from: Square
-    rook_to: Square
-
-    @classmethod
-    def from_algebraic(cls, k_from: str, k_to: str, r_from: str, r_to: str) -> Self:
-        """Convenience method: to make mapping shown below (from CastlingDirection) more readable"""
-        king_from = Square.from_algebraic(k_from)
-        king_to = Square.from_algebraic(k_to)
-        rook_from = Square.from_algebraic(r_from)
-        rook_to = Square.from_algebraic(r_to)
-        return cls(king_from, king_to, rook_from, rook_to)
-
-
-# The moves (in classical chess) made when castling
-CASTLING_RULES: dict[CastlingDirection, CastlingSquares] = {
-    CastlingDirection.WHITE_KING_SIDE: CastlingSquares.from_algebraic(
-        "e1", "g1", "h1", "f1"
-    ),
-    CastlingDirection.WHITE_QUEEN_SIDE: CastlingSquares.from_algebraic(
-        "e1", "c1", "a1", "d1"
-    ),
-    CastlingDirection.BLACK_KING_SIDE: CastlingSquares.from_algebraic(
-        "e8", "g8", "h8", "f8"
-    ),
-    CastlingDirection.BLACK_QUEEN_SIDE: CastlingSquares.from_algebraic(
-        "e8", "c8", "a8", "d8"
-    ),
-}
-
-
-CASTLING_ORDER: tuple[CastlingDirection, ...] = (
+CASTLING_ENCODING_ORDER: tuple[CastlingDirection, ...] = (
     CastlingDirection.WHITE_KING_SIDE,
     CastlingDirection.WHITE_QUEEN_SIDE,
     CastlingDirection.BLACK_KING_SIDE,
@@ -98,7 +50,11 @@ def castling_from_fen(castle_fen: str) -> dict[CastlingDirection, bool]:
 def castling_to_fen(castling_rights: dict[CastlingDirection, bool]) -> str:
     """create the part of the FEN string that encodes castling rights"""
     castling_chars = "".join(
-        [direction.value for direction in CASTLING_ORDER if castling_rights[direction]]
+        [
+            direction.value
+            for direction in CASTLING_ENCODING_ORDER
+            if castling_rights[direction]
+        ]
     )
     return castling_chars or "-"
 

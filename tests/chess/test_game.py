@@ -1,4 +1,4 @@
-"""Unit tests for /src/chess/moves.py"""
+"""Unit tests for /src/chess/game.py"""
 
 import pytest
 

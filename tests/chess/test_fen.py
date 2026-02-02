@@ -2,11 +2,9 @@
 
 import pytest
 
+from src.chess.castling import CastlingDirection, CastlingSquares
 from src.chess.fen import (
-    CASTLING_RULES,
     VALID_CASTLING_ENCODINGS,
-    CastlingDirection,
-    CastlingSquares,
     FENState,
     InvalidFENError,
     castling_from_fen,
@@ -257,33 +255,6 @@ def test_invalid_fen(fen: str) -> None:
 def test_creating_standard_starting_position() -> None:
     state = FENState.starting_position()
     assert state.to_fen() == "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-
-
-def test_castling_squares_creation() -> None:
-    """Test one case, just to have a little contract stating: 'I want to be able to create this dataclass'"""
-    castling_squares = CastlingSquares.from_algebraic("e1", "g1", "h1", "f1")
-    assert castling_squares.king_from == Square.from_algebraic("e1")
-    assert castling_squares.king_to == Square.from_algebraic("g1")
-    assert castling_squares.rook_from == Square.from_algebraic("h1")
-    assert castling_squares.rook_to == Square.from_algebraic("f1")
-
-
-@pytest.mark.parametrize(
-    "direction,k_from,k_to,r_from,r_to",
-    [
-        (CastlingDirection.WHITE_KING_SIDE, "e1", "g1", "h1", "f1"),
-        (CastlingDirection.WHITE_QUEEN_SIDE, "e1", "c1", "a1", "d1"),
-        (CastlingDirection.BLACK_KING_SIDE, "e8", "g8", "h8", "f8"),
-        (CastlingDirection.BLACK_QUEEN_SIDE, "e8", "c8", "a8", "d8"),
-    ],
-)
-def test_canonical_castling_rules(
-    direction: CastlingDirection, k_from: str, k_to: str, r_from: str, r_to: str
-) -> None:
-    """Classical castling positional changes of the king and rook."""
-    rule = CASTLING_RULES[direction]
-    expected = CastlingSquares.from_algebraic(k_from, k_to, r_from, r_to)
-    assert expected == rule
 
 
 @pytest.mark.parametrize("direction", [d for d in CastlingDirection])
