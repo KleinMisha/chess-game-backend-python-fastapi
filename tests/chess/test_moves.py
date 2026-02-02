@@ -7,17 +7,20 @@ import pytest
 import src.chess.moves as mv
 from src.chess.board import Board
 from src.chess.moves import (
+    CastlingDirection,
     Color,
     Move,
     Piece,
     PieceType,
     Square,
     candidate_bishop_moves,
+    candidate_castling_move,
     candidate_king_moves,
     candidate_knight_moves,
     candidate_pawn_moves,
     candidate_queen_moves,
     candidate_rook_moves,
+    castling_king_squares,
     is_attacked_by_bishop,
     is_attacked_by_king,
     is_attacked_by_knight,
@@ -911,8 +914,6 @@ def test_black_pawn_attack() -> None:
 
 
 # -- CASTLING RULES --
-
-
 def test_squares_between_on_rank_higher_rank() -> None:
     """check the algorithm correctly identifies the squares to the right"""
     a1 = Square.from_algebraic("a1")
@@ -982,3 +983,14 @@ def test_between_squares_on_rank_invalid() -> None:
     c5 = Square.from_algebraic("c5")
     with pytest.raises(ValueError):
         squares_between_on_rank(a8, c5)
+
+
+@pytest.mark.parametrize("direction", [direction for direction in CastlingDirection])
+def test_candidate_castling_moves(direction: CastlingDirection) -> None:
+    """Make sure that castling moves are using the king's squares and have a castling direction assigned to them"""
+    castling_move = candidate_castling_move(direction)
+    king_from, king_to = castling_king_squares(direction)
+    assert isinstance(castling_move, Move)
+    assert castling_move.from_square == king_from
+    assert castling_move.to_square == king_to
+    assert castling_move.castling_direction == direction

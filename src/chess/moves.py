@@ -425,6 +425,8 @@ def squares_between_on_rank(from_square: Square, to_square: Square) -> list[Squa
     """
 
     if from_square.rank != to_square.rank:
+        # todo  check if worth making this a custom error. It is right in between
+        # todo "expected error by invalid input" and "incorrect programming / should never happen if backend is done well"
         raise ValueError(
             f"squares_between_on_rank requires both squares to lie on the same rank. \n from: {from_square}\n to:{to_square}"
         )
@@ -442,10 +444,12 @@ def squares_between_on_rank(from_square: Square, to_square: Square) -> list[Squa
         if try_square == to_square:
             break
 
-        if not try_square.is_within_bounds():
-            break
-
         squares_found.append(try_square)
         square = try_square
 
     return squares_found
+
+
+def candidate_castling_move(direction: CastlingDirection) -> Move:
+    king_from, king_to = castling_king_squares(direction)
+    return Move(king_from, king_to, castling_direction=direction)
