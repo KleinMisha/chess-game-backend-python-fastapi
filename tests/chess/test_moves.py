@@ -9,6 +9,7 @@ from src.chess.board import Board
 from src.chess.moves import (
     CASTLING_RULES,
     PROMOTION_OPTIONS,
+    AcceptedMove,
     CastlingDirection,
     CastlingSquares,
     Color,
@@ -94,6 +95,60 @@ def test_converting_into_uci_incl_promotion() -> None:
     """Test inverse operation of creating UCI denoted move back"""
     move = Move.from_uci("e7e8q")
     assert move.to_uci() == "e7e8q"
+
+
+def test_creating_accepted_move_empty_board() -> None:
+    """
+    An AcceptedMove is a move that will be played.
+    Game determined it is legal and now needs a snapshot of the move + what pieces are moving/captured
+    """
+    board = Board.from_fen(EMPTY_FEN)
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    e2 = Square.from_algebraic("e2")
+    board.place_piece(white_pawn, e2)
+    move = Move.from_uci("e2e3")
+    accepted_move = AcceptedMove.from_move_and_board(move, board)
+    assert accepted_move.move == move
+    assert accepted_move.moving_piece == white_pawn
+    assert accepted_move.captured_piece is None
+
+
+def test_creating_accepted_move_w_capture() -> None:
+    """Include a piece that gets captured"""
+    board = Board.from_fen(EMPTY_FEN)
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+    e2 = Square.from_algebraic("e2")
+    d3 = Square.from_algebraic("d3")
+    board.place_piece(white_pawn, e2)
+    board.place_piece(black_pawn, d3)
+    move = Move.from_uci("e2d3")
+    accepted_move = AcceptedMove.from_move_and_board(move, board)
+    assert accepted_move.move == move
+    assert accepted_move.moving_piece == white_pawn
+    assert accepted_move.captured_piece == black_pawn
+
+
+def test_creating_accepted_move_w_en_passant() -> None:
+    """
+    Include en passant capture.
+
+    NOTE does not actually require for the board to contain a pawn on the correct square. Legality of the move is already determined before creation
+    NOTE for clarity will make the move an actual 'en passant' move. Even though it does not matter for this test.
+    NOTE will not actually place the opponent's pawn on the board. The creation logic should not depend on this.
+    NOTE It should simply understand--> if a white pawn is moving, then en passant captures a black pawn
+    """
+    board = Board.from_fen(EMPTY_FEN)
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+    e5 = Square.from_algebraic("e5")
+    d6 = Square.from_algebraic("d6")
+    board.place_piece(white_pawn, e5)
+    move = Move(from_square=e5, to_square=d6, is_en_passant=True)
+    accepted_move = AcceptedMove.from_move_and_board(move, board)
+    assert accepted_move.move == move
+    assert accepted_move.moving_piece == white_pawn
+    assert accepted_move.captured_piece == black_pawn
 
 
 # --- MOVEMENT RULES ---

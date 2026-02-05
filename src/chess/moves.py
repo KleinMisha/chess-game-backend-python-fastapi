@@ -22,6 +22,7 @@ class Board(Protocol):
     def empty_squares(self) -> list[Square]: ...
 
 
+# --- MODELS ---
 Vector = tuple[int, int]
 
 
@@ -61,6 +62,35 @@ class Move:
         """Convert into UCI notation"""
         piece_char = PIECE_TO_FEN[self.promote_to] if self.promote_to else ""
         return f"{self.from_square.to_algebraic()}{self.to_square.to_algebraic()}{piece_char}"
+
+
+@dataclass(frozen=True)
+class AcceptedMove:
+    """
+    Representation of the move given the current board position.
+    Need this object to be computed by the Game prior to updating FEN state / updating Board
+    """
+
+    move: Move
+    moving_piece: Piece
+    captured_piece: Optional[Piece] = None
+
+    @classmethod
+    def from_move_and_board(cls, move: Move, board: Board) -> Self:
+        """Construction from a Move object and the Board"""
+        moving_piece = board.piece(move.from_square)
+        if move.is_en_passant:
+            opponent_color = (
+                Color.WHITE if moving_piece.color == Color.BLACK else Color.BLACK
+            )
+            captured_piece = Piece(PieceType.PAWN, opponent_color)
+        else:
+            target_occupancy = board.piece(move.to_square)
+            captured_piece = (
+                target_occupancy if target_occupancy.type != PieceType.EMPTY else None
+            )
+
+        return cls(move, moving_piece, captured_piece)
 
 
 # --- MOVEMENT RULES ---
