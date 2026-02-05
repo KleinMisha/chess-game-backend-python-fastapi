@@ -430,6 +430,50 @@ def test_black_pawn_takes() -> None:
     assert uci_moves == set(["d4d3", "d4e3", "d4c3"])
 
 
+def test_pawn_takes_at_edge_of_board() -> None:
+    """Make sure board dimensions are respected to avoid KeyError from being raised."""
+    board = Board.from_fen(EMPTY_FEN)
+    a3 = Square.from_algebraic("a3")
+    b4 = Square.from_algebraic("b4")
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+
+    board.place_piece(white_pawn, a3)
+    board.place_piece(black_pawn, b4)
+
+    moves = candidate_pawn_moves(a3, board)
+    uci_moves = set([move.to_uci() for move in moves])
+    assert len(moves) == 2
+    assert uci_moves == set(["a3a4", "a3b4"])
+
+
+def test_double_pawn_push_from_starting_square() -> None:
+    """When in their starting positions (2nd rank for white, 7th rank for black), pawns can move by two squares"""
+    board = Board.from_fen(EMPTY_FEN)
+    e2 = Square.from_algebraic("e2")
+    e7 = Square.from_algebraic("e7")
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+    board.place_piece(white_pawn, e2)
+    board.place_piece(black_pawn, e7)
+
+    # check wiring
+    with patch.object(mv, "single_step_move") as mock_single_step:
+        moves = candidate_pawn_moves(e2, board)
+        assert mock_single_step.call_count == 2
+
+    # check behavior: make sure no typo in directions
+    moves = candidate_pawn_moves(e2, board)
+    uci_moves = set([move.to_uci() for move in moves])
+    assert len(moves) == 2
+    assert uci_moves == set(["e2e3", "e2e4"])
+
+    moves = candidate_pawn_moves(e7, board)
+    uci_moves = set([move.to_uci() for move in moves])
+    assert len(moves) == 2
+    assert uci_moves == set(["e7e6", "e7e5"])
+
+
 # --- ATTACK RULES ---
 def test_raycasting_attack_empty_board() -> None:
     """Sanity check: with the board empty, no square should be under attack."""

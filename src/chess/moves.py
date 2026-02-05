@@ -139,6 +139,15 @@ def candidate_pawn_moves(square: Square, board: Board) -> list[Move]:
     )
     moves.extend(single_step_move(square, board, pawn_push))
 
+    # pawn pushes from starting square: They can move by two in the first move
+    pawn_starting_ranks: dict[Color, int] = {Color.WHITE: 2, Color.BLACK: 7}
+    double_pawn_push: list[Vector] = (
+        [(0, 2)] if board.piece(square).color == Color.WHITE else [(0, -2)]
+    )
+    pawn_color = board.piece(square).color
+    if square.rank == pawn_starting_ranks[pawn_color]:
+        moves.extend(single_step_move(square, board, double_pawn_push))
+
     # pawns take diagonally:
     pawn_takes: list[Vector] = (
         [(1, 1), (-1, 1)]
@@ -151,9 +160,10 @@ def candidate_pawn_moves(square: Square, board: Board) -> list[Move]:
         target_square = Square(new_file, new_rank)
         player_color = board.piece(square).color
         opponent_color = Color.WHITE if player_color == Color.BLACK else Color.BLACK
-        is_opponent_piece = board.piece(target_square).color == opponent_color
-
-        if target_square.is_within_bounds() and is_opponent_piece:
+        if (
+            target_square.is_within_bounds()
+            and board.piece(target_square).color == opponent_color
+        ):
             moves.append(Move(from_square=square, to_square=target_square))
     return moves
 
@@ -465,6 +475,13 @@ def squares_between_on_rank(from_square: Square, to_square: Square) -> list[Squa
         square = try_square
 
     return squares_found
+
+
+def castling_path(direction: CastlingDirection) -> list[Square]:
+    """Given the selected castling rule, what squares lie between the starting positions of king and rook?"""
+    king_square, _ = castling_king_squares(direction)
+    rook_square, _ = castling_rook_squares(direction)
+    return squares_between_on_rank(king_square, rook_square)
 
 
 def candidate_castling_move(direction: CastlingDirection) -> Move:
