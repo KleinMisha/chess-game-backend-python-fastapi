@@ -97,7 +97,10 @@ def raycasting_move(
 
             if target_square not in empty_squares:
                 # only need to add the first occupied square found if it is the opponent's: then it can be captured.
-                if board.piece(target_square).color == opponent_color:
+                # Also cannot capture the king.
+                opponent_piece = board.piece(target_square).color == opponent_color
+                not_a_king = board.piece(target_square).type != PieceType.KING
+                if opponent_piece and not_a_king:
                     moves.append(Move(from_square=square, to_square=target_square))
                 break
 
@@ -117,7 +120,8 @@ def single_step_move(square: Square, board: Board, deltas: list[Vector]) -> list
 
         player_color = board.piece(square).color
         square_available = board.piece(target_square).color != player_color
-        if square_available:
+        not_a_king = board.piece(target_square).type != PieceType.KING
+        if square_available and not_a_king:
             moves.append(Move(from_square=square, to_square=target_square))
 
     return moves
@@ -160,11 +164,14 @@ def candidate_pawn_moves(square: Square, board: Board) -> list[Move]:
         target_square = Square(new_file, new_rank)
         player_color = board.piece(square).color
         opponent_color = Color.WHITE if player_color == Color.BLACK else Color.BLACK
-        if (
-            target_square.is_within_bounds()
-            and board.piece(target_square).color == opponent_color
-        ):
+        if not target_square.is_within_bounds():
+            continue
+
+        opponent_piece = board.piece(target_square).color == opponent_color
+        not_a_king = board.piece(target_square).type != PieceType.KING
+        if opponent_piece and not_a_king:
             moves.append(Move(from_square=square, to_square=target_square))
+
     return moves
 
 

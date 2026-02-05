@@ -174,6 +174,19 @@ def test_raycasting_move_w_mixed_blockers() -> None:
     assert uci_moves == set(["a5a4", "a5a3", "a5a2", "a5a1", "a5a6"])
 
 
+def test_raycasting_does_not_take_king() -> None:
+    """Cannot take the square the king is on."""
+    board = Board.from_fen(EMPTY_FEN)
+    white_king = Piece(PieceType.KING, Color.WHITE)
+    a1 = Square.from_algebraic("a1")
+    a5 = Square.from_algebraic("a5")
+    board.place_piece(white_king, a1)
+    vertical_moves = [(0, 1), (0, -1)]
+    moves = raycasting_move(a5, board, vertical_moves)
+    uci_moves = set([move.to_uci() for move in moves])
+    assert uci_moves == set(["a5a4", "a5a3", "a5a2", "a5a6", "a5a7", "a5a8"])
+
+
 def test_single_move_in_bounds() -> None:
     """
     Allow for a move that keeps you within bounds
@@ -232,6 +245,31 @@ def test_single_step_w_friendly_blocker() -> None:
     d4 = Square.from_algebraic("d4")
     moves = single_step_move(d4, board, step)
     assert len(moves) == 0
+
+
+def test_single_step_does_not_take_king() -> None:
+    """Cannot take the square the king is on."""
+    board = Board.from_fen(EMPTY_FEN)
+    white_king = Piece(PieceType.KING, Color.WHITE)
+    black_knight = Piece(PieceType.KNIGHT, Color.BLACK)
+    a1 = Square.from_algebraic("a1")
+    c2 = Square.from_algebraic("c2")
+    board.place_piece(white_king, a1)
+    board.place_piece(black_knight, c2)
+    step_deltas = [
+        (2, 1),
+        (2, -1),
+        (-2, 1),
+        (-2, -1),
+        (1, 2),
+        (1, -2),
+        (-1, 2),
+        (-1, -2),
+    ]
+    moves = single_step_move(c2, board, step_deltas)
+    uci_moves = set([move.to_uci() for move in moves])
+    assert len(moves) == 5
+    assert uci_moves == set(["c2a3", "c2b4", "c2d4", "c2e3", "c2e1"])
 
 
 def test_candidate_bishop_moves() -> None:
@@ -472,6 +510,27 @@ def test_double_pawn_push_from_starting_square() -> None:
     uci_moves = set([move.to_uci() for move in moves])
     assert len(moves) == 2
     assert uci_moves == set(["e7e6", "e7e5"])
+
+
+def test_pawn_does_not_take_king() -> None:
+    """Cannot take on the square occupied by the king."""
+    board = Board.from_fen(EMPTY_FEN)
+    white_king = Piece(PieceType.KING, Color.WHITE)
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+    white_knight = Piece(PieceType.KNIGHT, Color.WHITE)
+    a1 = Square.from_algebraic("a1")
+    b2 = Square.from_algebraic("b2")
+    c1 = Square.from_algebraic("c1")
+    board.place_piece(white_king, a1)
+    board.place_piece(black_pawn, b2)
+    board.place_piece(white_knight, c1)
+
+    # check: You should be able to push your pawn or take the knight on c1.
+    # The move to 'take the king on a1' is not allowed.
+    moves = candidate_pawn_moves(b2, board)
+    uci_moves = set([move.to_uci() for move in moves])
+    assert len(moves) == 2
+    assert uci_moves == set(["b2b1", "b2c1"])
 
 
 # --- ATTACK RULES ---
