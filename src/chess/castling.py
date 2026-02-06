@@ -36,3 +36,20 @@ class CastlingSquares:
         rook_from = Square.from_algebraic(r_from)
         rook_to = Square.from_algebraic(r_to)
         return cls(king_from, king_to, rook_from, rook_to)
+
+
+# The moves (in classical chess) made when castling
+CASTLING_RULES: dict[CastlingDirection, CastlingSquares] = {
+    CastlingDirection.WHITE_KING_SIDE: CastlingSquares.from_algebraic(
+        "e1", "g1", "h1", "f1"
+    ),
+    CastlingDirection.WHITE_QUEEN_SIDE: CastlingSquares.from_algebraic(
+        "e1", "c1", "a1", "d1"
+    ),
+    CastlingDirection.BLACK_KING_SIDE: CastlingSquares.from_algebraic(
+        "e8", "g8", "h8", "f8"
+    ),
+    CastlingDirection.BLACK_QUEEN_SIDE: CastlingSquares.from_algebraic(
+        "e8", "c8", "a8", "d8"
+    ),
+}
