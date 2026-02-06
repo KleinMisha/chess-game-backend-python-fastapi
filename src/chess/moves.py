@@ -10,7 +10,7 @@ Legality is checked later by Game
 from dataclasses import dataclass
 from typing import Callable, Optional, Protocol, Self
 
-from src.chess.castling import CastlingDirection, CastlingSquares
+from src.chess.castling import CASTLING_RULES, CastlingDirection
 from src.chess.pieces import FEN_TO_PIECE, PIECE_TO_FEN, Color, Piece, PieceType
 from src.chess.square import BOARD_DIMENSIONS, Square
 
@@ -47,16 +47,29 @@ class Move:
         examples:
         * "e2e5": move the piece that was on e4 to e5
         * "e7e8q" : (pawn) moves from e7 to e8 and promotes to a queen (the q)
-        * "e1g1": the king moved from
+        * "e1g1": the king moved from e1 to g1 (castling)
 
         NOTE: Castling / En Passant will be set later by Game class
         """
+        # decode from_square and to_square (always)
         from_sq = Square.from_algebraic(uci[:2])
         to_sq = Square.from_algebraic(uci[2:4])
-        move = cls(from_sq, to_sq)
-        if len(uci) == 5:
-            move.promote_to = FEN_TO_PIECE[uci[4]]
-        return move
+
+        # check if this is a castling move for the king
+        castling_direction = next(
+            (
+                direction
+                for direction in CastlingDirection
+                if (from_sq, to_sq) == castling_king_squares(direction)
+            ),
+            None,
+        )
+
+        # check if this is a (pawn) promotion
+        promote_to = FEN_TO_PIECE[uci[4]] if len(uci) == 5 else None
+        return cls(
+            from_sq, to_sq, castling_direction=castling_direction, promote_to=promote_to
+        )
 
     def to_uci(self) -> str:
         """Convert into UCI notation"""
@@ -452,23 +465,6 @@ ATTACK_RULES: dict[PieceType, IsAttackedFn] = {
 
 
 # -- CASTLING MOVES ---
-# The moves (in classical chess) made when castling
-CASTLING_RULES: dict[CastlingDirection, CastlingSquares] = {
-    CastlingDirection.WHITE_KING_SIDE: CastlingSquares.from_algebraic(
-        "e1", "g1", "h1", "f1"
-    ),
-    CastlingDirection.WHITE_QUEEN_SIDE: CastlingSquares.from_algebraic(
-        "e1", "c1", "a1", "d1"
-    ),
-    CastlingDirection.BLACK_KING_SIDE: CastlingSquares.from_algebraic(
-        "e8", "g8", "h8", "f8"
-    ),
-    CastlingDirection.BLACK_QUEEN_SIDE: CastlingSquares.from_algebraic(
-        "e8", "c8", "a8", "d8"
-    ),
-}
-
-
 def castling_king_squares(direction: CastlingDirection) -> tuple[Square, Square]:
     """convert the castling rule into a move of the king + the castling direction set properly"""
     rule = CASTLING_RULES[direction]

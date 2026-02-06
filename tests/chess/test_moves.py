@@ -6,12 +6,12 @@ import pytest
 
 import src.chess.moves as mv
 from src.chess.board import Board
+from src.chess.castling import CastlingSquares
 from src.chess.moves import (
     CASTLING_RULES,
     PROMOTION_OPTIONS,
     AcceptedMove,
     CastlingDirection,
-    CastlingSquares,
     Color,
     Move,
     Piece,
@@ -95,6 +95,16 @@ def test_converting_into_uci_incl_promotion() -> None:
     """Test inverse operation of creating UCI denoted move back"""
     move = Move.from_uci("e7e8q")
     assert move.to_uci() == "e7e8q"
+
+
+@pytest.mark.parametrize("direction", [d for d in CastlingDirection])
+def test_creating_move_incl_castling(direction: CastlingDirection) -> None:
+    """Creation logic for castling move"""
+    from_sq, to_sq = castling_king_squares(direction)
+    move = Move.from_uci(f"{from_sq.to_algebraic()}{to_sq.to_algebraic()}")
+    assert move.from_square == from_sq
+    assert move.to_square == to_sq
+    assert move.castling_direction == direction
 
 
 def test_creating_accepted_move_empty_board() -> None:
@@ -1078,15 +1088,6 @@ def test_black_pawn_attack() -> None:
 
 
 # -- CASTLING RULES --
-def test_castling_squares_creation() -> None:
-    """Test one case, just to have a little contract stating: 'I want to be able to create this dataclass'"""
-    castling_squares = CastlingSquares.from_algebraic("e1", "g1", "h1", "f1")
-    assert castling_squares.king_from == Square.from_algebraic("e1")
-    assert castling_squares.king_to == Square.from_algebraic("g1")
-    assert castling_squares.rook_from == Square.from_algebraic("h1")
-    assert castling_squares.rook_to == Square.from_algebraic("f1")
-
-
 @pytest.mark.parametrize(
     "direction,k_from,k_to,r_from,r_to",
     [
