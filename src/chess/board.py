@@ -2,9 +2,9 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Self
+from typing import Iterable, Self
 
-from src.chess.moves import ATTACK_RULES, MOVEMENT_RULES, Move, squares_between_on_rank
+from src.chess.moves import ATTACK_RULES, MOVEMENT_RULES, Move
 from src.chess.pieces import Color, Piece, PieceType
 from src.chess.square import BOARD_DIMENSIONS, Square
 
@@ -75,8 +75,12 @@ class Board:
         return "".join(fen_characters)
 
     def place_piece(self, piece: Piece, square: Square) -> None:
-        """Convenience method to make tests easier."""
+        """place a piece on the board at the given square."""
         self.position[square] = piece
+
+    def remove_piece(self, square: Square) -> None:
+        """remove a piece placed on the board."""
+        self.position[square] = Piece(PieceType.EMPTY, Color.NONE)
 
     def piece(self, square: Square) -> Piece:
         return self.position[square]
@@ -106,13 +110,9 @@ class Board:
         # TODO: If I ONLY need this version, just remove the previous method and move the logic into here
         return self.locate_pieces(PieceType.EMPTY)
 
-    def empty_squares_between_on_rank(
-        self, from_square: Square, to_square: Square
-    ) -> list[Square]:
-        """Find the empty squares in between two pieces on the same rank"""
-        empty_squares = self.empty_squares()
-        squares_between = squares_between_on_rank(from_square, to_square)
-        return [square for square in squares_between if square in empty_squares]
+    def is_any_occupied(self, squares: Iterable[Square]) -> bool:
+        """Check if any of the supplied squares are not empty"""
+        return any(square not in self.empty_squares() for square in squares)
 
     def generate_candidate_moves(self, color: Color) -> list[Move]:
         """
@@ -130,16 +130,16 @@ class Board:
             movement_rule = MOVEMENT_RULES[piece_type]
             piece_moves = movement_rule(starting_square, current_board)
             candidate_moves.extend(piece_moves)
+
         return candidate_moves
 
     def move_piece(self, move: Move) -> None:
         """Update the position on the board"""
         piece_that_moved = self.piece(move.from_square)
-        empty = Piece(PieceType.EMPTY, Color.NONE)
-        self.place_piece(empty, move.from_square)
+        self.remove_piece(move.from_square)
         self.place_piece(piece_that_moved, move.to_square)
 
-    def move_pieces(self, moves: list[Move]) -> None:
+    def move_pieces(self, moves: Iterable[Move]) -> None:
         """convenience method to apply multiple moves (if you quickly want to start a board in a given position reached after some moves)"""
         for move in moves:
             self.move_piece(move)
@@ -153,6 +153,10 @@ class Board:
             ATTACK_RULES[piece_type](square, by_color, current_board)
             for piece_type in ATTACK_RULES
         )
+
+    def is_any_under_attack(self, squares: Iterable[Square], by_color: Color) -> bool:
+        """Is any of the supplied squares under attack?"""
+        return any(self.is_square_attacked(square, by_color) for square in squares)
 
     def is_check(self, color: Color) -> bool:
         """Is the King of the specified color under attack in the current board position?"""
