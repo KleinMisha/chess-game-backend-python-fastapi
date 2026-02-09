@@ -49,6 +49,19 @@ def castling_board() -> Board:
     return board
 
 
+@pytest.fixture
+def kings_only_board() -> Board:
+    """Create a board with only kings"""
+    board = Board.from_fen(EMPTY_FEN)
+    e1 = Square.from_algebraic("e1")
+    e8 = Square.from_algebraic("e8")
+    white_king = Piece.from_fen("K")
+    black_king = Piece.from_fen("k")
+    board.place_piece(white_king, e1)
+    board.place_piece(black_king, e8)
+    return board
+
+
 # -- CREATION LOGIC --
 def test_game_creation_from_model_roundtrip() -> None:
     """Create a Game from a GameModel and convert back into GameModel"""
@@ -587,7 +600,7 @@ def test_make_illegal_move() -> None:
     game.register_player("player_2")
 
     with patch.object(
-        game, attribute="_generate_legal_moves", return_value=["a1a2"]
+        game, attribute="_generate_legal_moves", return_value=[Move.from_uci("a1a2")]
     ) as _:
         with pytest.raises(IllegalMoveError):
             game.make_move("a1b5", "player_1")
@@ -757,7 +770,7 @@ def test_make_move_with_capture() -> None:
     assert game.board == board_after_move
 
 
-# # --- CASTLING ---
+#  --- CASTLING ---
 @pytest.mark.parametrize("direction", [d for d in CastlingDirection])
 def test_castling_moves(direction: CastlingDirection, castling_board: Board) -> None:
     """Test wiring and chess logic: Make castling move
@@ -919,3 +932,80 @@ def test_revoke_rights_if_white_rook_gets_captured(castling_board: Board) -> Non
         d: True if d != CastlingDirection.WHITE_QUEEN_SIDE else False
         for d in CastlingDirection
     }
+
+
+# --- EN PASSANT ---
+@pytest.mark.parametrize(
+    "en_passant_sq, player_color",
+    [
+        (
+            Square.from_algebraic("e6"),
+            Color.WHITE,
+        ),  # White can take black pawn on 6th rank
+        (
+            Square.from_algebraic("e3"),
+            Color.BLACK,
+        ),  # Black can take white pawn on 3rd rank
+    ],
+)
+def test_en_passant_moves(
+    en_passant_sq: Square, player_color: Color, kings_only_board: Board
+) -> None:
+    """Test wiring and chess logic: Make en passant move"""
+    # prepare board position with pawns in correct locations
+    rank_delta = -1 if player_color == Color.WHITE else 1
+    player_pawn_sq = Square(
+        file=en_passant_sq.file + 1, rank=en_passant_sq.rank + rank_delta
+    )
+    opponent_pawn_sq = Square(
+        file=en_passant_sq.file, rank=en_passant_sq.rank + rank_delta
+    )
+    board = kings_only_board
+    player_pawn = (
+        Piece.from_fen("P") if player_color == Color.WHITE else Piece.from_fen("p")
+    )
+    opponent_pawn = (
+        Piece.from_fen("p") if player_color == Color.WHITE else Piece.from_fen("P")
+    )
+    board.place_piece(player_pawn, player_pawn_sq)
+    board.place_piece(opponent_pawn, opponent_pawn_sq)
+
+    # The en-passant move: move player's pawn to en-passant square
+    en_passant_move = Move(
+        from_square=player_pawn_sq, to_square=en_passant_sq, is_en_passant=True
+    )
+
+    # expected board: Opponent pawn is removed, player pawn moved to the en-passant square
+    board_after_move = deepcopy(board)
+    board_after_move.move_piece(en_passant_move)
+    board_after_move.remove_piece(opponent_pawn_sq)
+
+    # Play the move: chess logic
+    fen = f"{board.to_fen()} {player_color.name.lower()[0]} - {en_passant_sq.to_algebraic()} 0 42"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
+    game.make_move(en_passant_move.to_uci(), f"player_{player_color.name.lower()}")
+
+    # check board position
+    assert game.board == board_after_move
+
+    # check that FEN no longer has an en passant square
+    assert game.history == [fen]
+    assert game.state.en_passant_square is None
+
+
+# --- PROMOTION ---
+
+# --- CHECK MATE ---
+
+# --- STALE MATE ---
+
+# --- THREE FOLD REPETITION ---
+
+# --- HALF CLOCK DRAW ---

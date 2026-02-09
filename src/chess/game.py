@@ -192,13 +192,16 @@ class Game:
         # determine legal moves
         player_color = self._get_player_color(player)
         legal_moves = self._generate_legal_moves(player_color)
+
         # check if move is legal
-        new_move = Move.from_uci(move_uci)
-        if new_move not in legal_moves:
+        if move_uci not in [move.to_uci() for move in legal_moves]:
             raise IllegalMoveError(f"Move not allowed: {move_uci}")
 
-        # Store move info before update
-        accepted_move = self._create_accepted_move(new_move)
+        # The selected Move instance
+        selected_move = next(move for move in legal_moves if move.to_uci() == move_uci)
+
+        # Enrich move information. Turn Move --> AcceptedMove instance.
+        accepted_move = self._create_accepted_move(selected_move)
 
         # update the FEN history (with the FEN before the move)
         current_fen = self.state.to_fen()
@@ -573,6 +576,9 @@ class Game:
         """
         Function in moves.py checks the board to see if any of your pawns are on the correct squares to perform an en passant move.
         """
+        print(
+            f"Generate en passant moves to square: {en_passant_square.to_algebraic()}"
+        )
         player_color = self._get_turn_player_color()
         return en_passant_moves(
             en_passant_square=en_passant_square,
@@ -583,6 +589,13 @@ class Game:
     def _update_board_w_en_passant(self, move: Move) -> None:
         """
         Update the board after the en passant move.
+        ---
+        """
+        self._move_en_passant_pieces(self.board, move)
+
+    def _move_en_passant_pieces(self, board: Board, move: Move) -> None:
+        """
+        Make the en passant move
         ---
 
         1. Move the pawn diagonally
@@ -596,15 +609,12 @@ class Game:
         assert self.state.en_passant_square
 
         # make the original move (this moves the pawn diagonally onto the en passant square)
-        self.board.move_piece(move)
+        board.move_piece(move)
 
         # take on the square where the enemy pawn is standing
         en_passant_square = self.state.en_passant_square
         take_square = Square(file=en_passant_square.file, rank=move.from_square.rank)
-        self.board.remove_piece(take_square)
-
-    def _move_en_passant_pieces(self, board: Board, move: Move) -> None:
-        """"""
+        board.remove_piece(take_square)
 
     # -- PROMOTION RULE HELPERS ---
     def _is_pawn_push_to_promotion_square(self, move: Move) -> bool:
