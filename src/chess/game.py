@@ -421,8 +421,8 @@ class Game:
                 return True
         return False
 
-    def _is_half_move_draw(self) -> bool:
-        """If you reach 50 consecutive half-moves, your reached a draw"""
+    def _is_half_move_clock_draw(self) -> bool:
+        """After 50 half clock moves, the game results in a draw."""
         return self.state.half_move_clock >= 50
 
     # -- CASTLING RULE HELPERS ---
@@ -645,7 +645,3 @@ class Game:
 
     def _is_capture(self, move: AcceptedMove) -> bool:
         return bool(move.captured_piece)
-
-    def _is_half_move_clock_draw(self) -> bool:
-        """After 50 half clock moves, the game results in a draw."""
-        return self.state.half_move_clock >= 50

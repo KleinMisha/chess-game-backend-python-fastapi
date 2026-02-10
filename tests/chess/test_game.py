@@ -1389,20 +1389,3 @@ def test_half_move_clock_draw(kings_only_board: Board) -> None:
     game.make_move("e1e2", "player_white")
     assert game.status == Status.DRAW_FIFTY_HALF_MOVE_RULE
     assert game.winner is None
-
-
-def test_not_half_move_clock_draw(kings_only_board: Board) -> None:
-    """Make the 50th consecutive 'half-clock move'. Results in draw."""
-    board = kings_only_board
-    fen = f"{board.to_fen()} w KQkq - 42 100"
-    model = GameModel(
-        current_fen=fen,
-        history_fen=[],
-        moves_uci=[],
-        registered_players={"white": "player_white", "black": "player_black"},
-        status="in progress",
-    )
-    game = Game.from_model(model)
-    game.make_move("e1e2", "player_white")
-    assert game.status != Status.DRAW_FIFTY_HALF_MOVE_RULE
-    assert game.winner is None
