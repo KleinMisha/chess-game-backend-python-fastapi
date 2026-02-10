@@ -1,5 +1,6 @@
 """Unit tests for /src/chess/moves.py"""
 
+from itertools import product
 from unittest.mock import call, patch
 
 import pytest
@@ -1244,8 +1245,10 @@ def test_two_valid_en_passant_moves_white() -> None:
 
 
 def test_two_valid_en_passant_moves_black() -> None:
-    """Should return two moves if there are pawns on both adjacent files"""
-    """Should return a single en-passant move. Check scenario for playing with BLACK pieces"""
+    """
+    Should return two moves if there are pawns on both adjacent files.
+    Check scenario for playing with BLACK pieces
+    """
     board = Board.from_fen(EMPTY_FEN)
     black_pawn = Piece(PieceType.PAWN, Color.BLACK)
 
@@ -1260,6 +1263,33 @@ def test_two_valid_en_passant_moves_black() -> None:
         Move(from_square=e4, to_square=d3, is_en_passant=True),
     ]
     moves_found = en_passant_moves(d3, Color.BLACK, board)
+    assert len(moves_found) == len(expected_moves)
+    assert all(move in expected_moves for move in moves_found)
+
+
+@pytest.mark.parametrize(
+    "edge_file, color", list(product(["a", "h"], [Color.WHITE, Color.BLACK]))
+)
+def test_one_valid_en_passant_move_at_board_edge(edge_file: str, color: Color) -> None:
+    """If the en passant square is on tha a file or h file (canonical board), only en passant move possible from one direction."""
+
+    en_passant_rank = 6 if color == Color.WHITE else 3
+    en_passant_sq = Square.from_algebraic(f"{edge_file}{en_passant_rank}")
+    rank_delta = -1 if color == Color.WHITE else 1
+    pawn_sq = (
+        Square.from_algebraic(f"b{en_passant_rank + rank_delta}")
+        if edge_file == "a"
+        else Square.from_algebraic(f"g{en_passant_rank + rank_delta}")
+    )
+    board = Board.from_fen(EMPTY_FEN)
+
+    board.place_piece(Piece(PieceType.PAWN, color), pawn_sq)
+
+    expected_moves: list[Move] = [
+        Move(from_square=pawn_sq, to_square=en_passant_sq, is_en_passant=True)
+    ]
+    moves_found = en_passant_moves(en_passant_sq, color, board)
+
     assert len(moves_found) == len(expected_moves)
     assert all(move in expected_moves for move in moves_found)
 

@@ -539,6 +539,8 @@ def en_passant_moves(
             file=en_passant_square.file + df,
             rank=en_passant_square.rank + opposite_direction,
         )
+        if not maybe_pawn_square.is_within_bounds():
+            continue
         piece_on_square = board.piece(maybe_pawn_square)
         own_pawn = Piece(PieceType.PAWN, color)
         if piece_on_square == own_pawn:
