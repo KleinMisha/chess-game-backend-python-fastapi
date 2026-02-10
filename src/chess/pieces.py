@@ -53,7 +53,7 @@ class Piece:
 
     def __post_init__(self):
         # NOTE: The King's worth is undefined (does not count towards total points), and an empty square should also have zero points
-        self.points = PIECE_POINTS.get(self.type, 0)
+        self._compute_points()
 
     @classmethod
     def from_fen(cls, character: str) -> Self:
@@ -71,3 +71,8 @@ class Piece:
 
     def promote_to(self, new_type: PieceType) -> None:
         self.type = new_type
+        self._compute_points()
+
+    def _compute_points(self) -> None:
+        """Determine value of the piece. Done at creation, but must be recomputed after promotion."""
+        self.points = PIECE_POINTS.get(self.type, 0)

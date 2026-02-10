@@ -1,8 +1,17 @@
 """Unit tests for /src/chess/pieces.py"""
 
+from itertools import product
+
 import pytest
 
-from src.chess.pieces import FEN_TO_PIECE, PIECE_TO_FEN, Color, Piece, PieceType
+from src.chess.pieces import (
+    FEN_TO_PIECE,
+    PIECE_POINTS,
+    PIECE_TO_FEN,
+    Color,
+    Piece,
+    PieceType,
+)
 
 
 @pytest.mark.parametrize("char", [char.upper() for char in FEN_TO_PIECE.keys()])
@@ -41,10 +50,14 @@ def test_black_pieces_to_fen(piece_type: PieceType) -> None:
     assert piece.to_fen() == PIECE_TO_FEN[piece_type].lower()
 
 
-@pytest.mark.parametrize("color", [c for c in Color])
-def test_promotion_to_queen(color: Color) -> None:
-    """Promote a piece to Queen. Make sure that the class is mutable (and not changed to frozen or something), and does not by accident change the color"""
+@pytest.mark.parametrize(
+    "color, new_type",
+    list(product([Color.WHITE, Color.BLACK], list(PIECE_POINTS.keys()))),
+)
+def test_promotion_to_queen(color: Color, new_type: PieceType) -> None:
+    """Promote a piece. Make sure that the class is mutable (and not changed to frozen or something), and does not by accident change the color"""
     piece = Piece(PieceType.PAWN, color)
-    piece.promote_to(PieceType.QUEEN)
-    assert piece.type == PieceType.QUEEN
+    piece.promote_to(new_type)
+    assert piece.type == new_type
     assert piece.color == color
+    assert piece.points == PIECE_POINTS[new_type]
