@@ -38,7 +38,7 @@ class Status(Enum):
     CHECKMATE = auto()
     STALEMATE = auto()
     DRAW_REPETITION = auto()
-    DRAW_FIFTY_MOVE_RULE = auto()
+    DRAW_FIFTY_HALF_MOVE_RULE = auto()
     ABORTED = auto()
 
 
@@ -368,6 +368,9 @@ class Game:
         if self._is_three_fold_repetition():
             self._change_status(Status.DRAW_REPETITION)
 
+        if self._is_half_move_clock_draw():
+            self._change_status(Status.DRAW_FIFTY_HALF_MOVE_RULE)
+
     def _change_status(self, new_status: Status) -> None:
         self.status = new_status
 
@@ -640,3 +643,7 @@ class Game:
 
     def _is_capture(self, move: AcceptedMove) -> bool:
         return bool(move.captured_piece)
+
+    def _is_half_move_clock_draw(self) -> bool:
+        """After 50 half clock moves, the game results in a draw."""
+        return self.state.half_move_clock >= 50

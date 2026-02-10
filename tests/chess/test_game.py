@@ -1140,9 +1140,57 @@ def test_pawn_promotion(
 
 
 # --- CHECK MATE ---
+def test_ladder_mate() -> None:
+    """Known check mate position: rook/queen and rook/queen VS king."""
+
+
+def test_smothered_mate() -> None:
+    """Known check mate position: king is boxed-in"""
+
+
+def test_queen_in_your_face_mate() -> None:
+    """Known check mate position: king and queen VS king."""
+
+
+def test_check_but_not_mate() -> None:
+    """Check the king, but give it an escape square."""
+
+
+def test_check_but_can_block() -> None:
+    """Check the king, but give the opponent a way to block the check."""
+
+
+def test_check_but_can_capture() -> None:
+    """Check the king, but give the opponent a way to capture the checking piece."""
+
 
 # --- STALE MATE ---
+def test_stale_mate_position() -> None:
+    """After the move, king is not in check, but player has no legal moves left."""
+
 
 # --- THREE FOLD REPETITION ---
+def test_three_fold_repetition() -> None:
+    """Repeat the same position 3 times? Draw."""
+
+
+def test_only_two_fold_repetition() -> None:
+    """Repeat the same position just twice? Not yet a draw."""
+
 
 # --- HALF CLOCK DRAW ---
+def test_half_move_clock_draw(kings_only_board: Board) -> None:
+    """Make the 50th consecutive 'half-clock move'. Results in draw."""
+    board = kings_only_board
+    fen = f"{board.to_fen()} w KQkq - 49 100"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
+    game.make_move("e1e2", "player_white")
+    assert game.status == Status.DRAW_FIFTY_HALF_MOVE_RULE
+    assert game.winner is None
