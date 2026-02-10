@@ -1142,26 +1142,166 @@ def test_pawn_promotion(
 # --- CHECK MATE ---
 def test_ladder_mate() -> None:
     """Known check mate position: rook/queen and rook/queen VS king."""
+    # set up board with Black being one move away from getting ladder mated
+    board = Board.from_fen(EMPTY_FEN)
+    e1 = Square.from_algebraic("e1")
+    b8 = Square.from_algebraic("b8")
+    h7 = Square.from_algebraic("h7")
+    g6 = Square.from_algebraic("g6")
+    board.place_piece(Piece.from_fen("K"), e1)
+    board.place_piece(Piece.from_fen("k"), b8)
+    board.place_piece(Piece.from_fen("R"), h7)
+    board.place_piece(Piece.from_fen("R"), g6)
 
+    fen = f"{board.to_fen()} w - - 0 42"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
 
-def test_smothered_mate() -> None:
-    """Known check mate position: king is boxed-in"""
+    # mate the black king:
+    game.make_move("g6g8", "player_white")
+    assert game.status == Status.CHECKMATE
+    assert game.winner == "player_white"
+
+    # the next player should not be able to make a new move:
+    with pytest.raises(GameStateError):
+        game.legal_moves("player_black")
 
 
 def test_queen_in_your_face_mate() -> None:
     """Known check mate position: king and queen VS king."""
+    # set up board with white being one move away from getting mated
+    e1 = Square.from_algebraic("e1")
+    e3 = Square.from_algebraic("e3")
+    d3 = Square.from_algebraic("d3")
+    black_king = Piece.from_fen("k")
+    white_king = Piece.from_fen("K")
+    black_queen = Piece.from_fen("q")
+    board = Board.from_fen(EMPTY_FEN)
+    board.place_piece(white_king, e1)
+    board.place_piece(black_king, e3)
+    board.place_piece(black_queen, d3)
+
+    fen = f"{board.to_fen()} b - - 23 42"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
+
+    # mate the white king
+    game.make_move("d3e2", "player_black")
+    assert game.status == Status.CHECKMATE
+    assert game.winner == "player_black"
 
 
 def test_check_but_not_mate() -> None:
     """Check the king, but give it an escape square."""
+    # prepare board right before checking the white king
+    h1 = Square.from_algebraic("h1")
+    g4 = Square.from_algebraic("g4")
+    f4 = Square.from_algebraic("f4")
+    black_king = Piece.from_fen("k")
+    white_king = Piece.from_fen("K")
+    black_queen = Piece.from_fen("q")
+    board = Board.from_fen(EMPTY_FEN)
+    board.place_piece(white_king, h1)
+    board.place_piece(black_king, g4)
+    board.place_piece(black_queen, f4)
+
+    fen = f"{board.to_fen()} b - - 23 42"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
+
+    # check the white king
+    game.make_move("f4f3", "player_black")
+    assert game.status == Status.IN_PROGRESS
+
+    legal_moves_next_player = game.legal_moves("player_white")
+    assert set(legal_moves_next_player) == set(["h1g1", "h1h2"])
 
 
 def test_check_but_can_block() -> None:
     """Check the king, but give the opponent a way to block the check."""
+    # prepare board right before checking the white king
+    h1 = Square.from_algebraic("h1")
+    f2 = Square.from_algebraic("f2")
+    g4 = Square.from_algebraic("g4")
+    f1 = Square.from_algebraic("f1")
+    black_king = Piece.from_fen("k")
+    white_king = Piece.from_fen("K")
+    black_queen = Piece.from_fen("q")
+    white_knight = Piece.from_fen("N")
+    board = Board.from_fen(EMPTY_FEN)
+    board.place_piece(white_king, h1)
+    board.place_piece(black_king, f2)
+    board.place_piece(black_queen, g4)
+    board.place_piece(white_knight, f1)
+
+    fen = f"{board.to_fen()} b - - 23 42"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
+
+    # check the white king (would've been check mate)
+    game.make_move("g4h3", "player_black")
+    assert game.status == Status.IN_PROGRESS
+
+    # check there should only one forced move: move the knight in from of the queen.
+    legal_moves_next_player = game.legal_moves("player_white")
+    assert set(legal_moves_next_player) == set(["f1h2"])
 
 
 def test_check_but_can_capture() -> None:
     """Check the king, but give the opponent a way to capture the checking piece."""
+    # prepare board right before checking the white king
+    h1 = Square.from_algebraic("h1")
+    f2 = Square.from_algebraic("f2")
+    f4 = Square.from_algebraic("f4")
+    black_king = Piece.from_fen("k")
+    white_king = Piece.from_fen("K")
+    black_queen = Piece.from_fen("q")
+    board = Board.from_fen(EMPTY_FEN)
+    board.place_piece(white_king, h1)
+    board.place_piece(black_king, f2)
+    board.place_piece(black_queen, f4)
+
+    fen = f"{board.to_fen()} b - - 23 42"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
+
+    # check the white king
+    game.make_move("f4h2", "player_black")
+    assert game.status == Status.IN_PROGRESS
+
+    # check there should only one forced move: move the knight in from of the queen.
+    legal_moves_next_player = game.legal_moves("player_white")
+    assert set(legal_moves_next_player) == set(["h1h2"])
 
 
 # --- STALE MATE ---
