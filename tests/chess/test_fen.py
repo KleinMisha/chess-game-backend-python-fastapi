@@ -284,3 +284,46 @@ def test_revoking_all_rights(color: Color) -> None:
         d: False if color.name.lower() in d.name.lower() else True
         for d in CastlingDirection
     }
+
+
+def test_comparing_fen_for_repetition() -> None:
+    """Reached the same FEN? Should return TRUE."""
+    fen1 = FENState.starting_position()
+    fen2 = FENState.starting_position()
+    assert fen1.is_same_position(fen2)
+
+
+def test_comparison_does_not_care_about_turn_counters() -> None:
+    """Turn counter and half move clock counter should not matter. Still return TRUE."""
+    fen_str_1 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    fen_str_2 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 4"
+    fen_str_3 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 42 4"
+    fen1 = FENState.from_fen(fen_str_1)
+    fen2 = FENState.from_fen(fen_str_2)
+    fen3 = FENState.from_fen(fen_str_3)
+    assert fen1.is_same_position(fen2)
+    assert fen1.is_same_position(fen3)
+
+
+def test_castling_matters_for_comparison() -> None:
+    """Do not only compare board position: Also compare castling rights."""
+    fen_str_1 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    fen_str_2 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 4"
+    fen_str_3 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w Kk - 42 4"
+    fen1 = FENState.from_fen(fen_str_1)
+    fen2 = FENState.from_fen(fen_str_2)
+    fen3 = FENState.from_fen(fen_str_3)
+    assert fen1.is_same_position(fen2)
+    assert not fen1.is_same_position(fen3)
+
+
+def test_en_passant_matters_for_comparison() -> None:
+    """Do not only compare board position: Also compare en passant square."""
+    fen_str_1 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    fen_str_2 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 4"
+    fen_str_3 = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq e6 42 4"
+    fen1 = FENState.from_fen(fen_str_1)
+    fen2 = FENState.from_fen(fen_str_2)
+    fen3 = FENState.from_fen(fen_str_3)
+    assert fen1.is_same_position(fen2)
+    assert not fen1.is_same_position(fen3)

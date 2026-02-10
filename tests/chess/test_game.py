@@ -1307,15 +1307,70 @@ def test_check_but_can_capture() -> None:
 # --- STALE MATE ---
 def test_stale_mate_position() -> None:
     """After the move, king is not in check, but player has no legal moves left."""
+    # prepare board right before stale mating.
+    h1 = Square.from_algebraic("h1")
+    g4 = Square.from_algebraic("g4")
+    f4 = Square.from_algebraic("f4")
+    black_king = Piece.from_fen("k")
+    white_king = Piece.from_fen("K")
+    black_queen = Piece.from_fen("q")
+    board = Board.from_fen(EMPTY_FEN)
+    board.place_piece(white_king, h1)
+    board.place_piece(black_king, g4)
+    board.place_piece(black_queen, f4)
+
+    fen = f"{board.to_fen()} b - - 23 42"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
+
+    # stale mate
+    game.make_move("f4g3", "player_black")
+    assert game.status == Status.STALEMATE
 
 
 # --- THREE FOLD REPETITION ---
 def test_three_fold_repetition() -> None:
     """Repeat the same position 3 times? Draw."""
 
+    # say the players are silly and decide to 3-fold repeat immediately from the get go
+    game = Game.new_game("player_white", "white")
+    game.register_player("player_black")
+
+    move_sequence = ["g1f3", "g8f6", "f3g1", "f6g8"]
+    moves: list[str] = []
+    moves.extend(move_sequence)
+    moves.extend(move_sequence)
+
+    for idx, move in enumerate(moves):
+        turn_player = "player_white" if (idx + 1) % 2 != 0 else "player_black"
+        print(f"move: {move}, by: {turn_player}")
+        game.make_move(move, turn_player)
+
+    assert game.status == Status.DRAW_REPETITION
+
 
 def test_only_two_fold_repetition() -> None:
     """Repeat the same position just twice? Not yet a draw."""
+
+    game = Game.new_game("player_white", "white")
+    game.register_player("player_black")
+
+    move_sequence = ["g1f3", "g8f6", "f3g1", "f6g8"]
+    moves: list[str] = []
+    moves.extend(move_sequence)
+
+    for idx, move in enumerate(moves):
+        turn_player = "player_white" if (idx + 1) % 2 != 0 else "player_black"
+        print(f"move: {move}, by: {turn_player}")
+        game.make_move(move, turn_player)
+
+    assert game.status == Status.IN_PROGRESS
 
 
 # --- HALF CLOCK DRAW ---
@@ -1333,4 +1388,21 @@ def test_half_move_clock_draw(kings_only_board: Board) -> None:
     game = Game.from_model(model)
     game.make_move("e1e2", "player_white")
     assert game.status == Status.DRAW_FIFTY_HALF_MOVE_RULE
+    assert game.winner is None
+
+
+def test_not_half_move_clock_draw(kings_only_board: Board) -> None:
+    """Make the 50th consecutive 'half-clock move'. Results in draw."""
+    board = kings_only_board
+    fen = f"{board.to_fen()} w KQkq - 42 100"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
+    game.make_move("e1e2", "player_white")
+    assert game.status != Status.DRAW_FIFTY_HALF_MOVE_RULE
     assert game.winner is None

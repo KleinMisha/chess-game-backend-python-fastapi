@@ -407,15 +407,17 @@ class Game:
         return not self._is_check(color) and not self._has_legal_move(color)
 
     def _is_three_fold_repetition(self) -> bool:
-        """Check if the new FEN occurs 3 times in the history"""
+        """Use FEN history to determine if you have reached this position for the third time."""
 
-        # TODO: Check if there is some nicer way of doing this.
-        new_fen = self.state.to_fen()
+        new_fen = self.state
         count = 0
-        for previous_fen in self.history:
-            if new_fen == previous_fen:
+        for previous_fen_str in self.history:
+            previous_fen = FENState.from_fen(previous_fen_str)
+            if new_fen.is_same_position(previous_fen):
                 count += 1
-            if count == 3:
+
+            # NOTE: Because the new position already counts as the first occurrence --> check it exists another two times in the history.
+            if count >= 2:
                 return True
         return False
 

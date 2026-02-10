@@ -2,6 +2,8 @@
 Representation of a single state of a chess game. The part that can be encoded in a FEN string.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from string import ascii_lowercase
 from typing import Optional, Self
@@ -289,3 +291,28 @@ class FENState:
             for direction in CastlingDirection
             if color.name.lower() in direction.name.lower()
         ]
+
+    def is_same_position(self, other: FENState) -> bool:
+        """
+        Test if another FEN state is considered the same with regards to the three-fold repetition rule.
+        ---
+
+        Three fold repetition checks:
+        * board position
+        * turn player (color to move)
+        * castling rights
+        * en passant square
+
+        That is, everything _except_ the turn counter and half move clock.
+        """
+        return self._repetition_key() == other._repetition_key()
+
+    def _repetition_key(self) -> tuple[str, str, str, str]:
+        """Create tuple of the information needed to determine if this position has repeated itself during a game."""
+        color_str = self.color_to_move.name.lower()[0]
+        castling_str = castling_to_fen(self.castling_rights)
+        en_passant_str = (
+            self.en_passant_square.to_algebraic() if self.en_passant_square else "-"
+        )
+
+        return (self.position, color_str, castling_str, en_passant_str)
