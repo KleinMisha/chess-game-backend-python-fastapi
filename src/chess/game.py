@@ -576,9 +576,6 @@ class Game:
         """
         Function in moves.py checks the board to see if any of your pawns are on the correct squares to perform an en passant move.
         """
-        print(
-            f"Generate en passant moves to square: {en_passant_square.to_algebraic()}"
-        )
         player_color = self._get_turn_player_color()
         return en_passant_moves(
             en_passant_square=en_passant_square,

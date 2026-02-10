@@ -1,6 +1,7 @@
 """Unit tests for /src/chess/game.py"""
 
 from copy import deepcopy
+from itertools import product
 from unittest.mock import Mock, patch
 
 import pytest
@@ -998,6 +999,94 @@ def test_en_passant_moves(
     # check that FEN no longer has an en passant square
     assert game.history == [fen]
     assert game.state.en_passant_square is None
+
+
+@pytest.mark.parametrize(
+    "en_passant_sq, player_color",
+    [
+        (
+            Square.from_algebraic("e6"),
+            Color.WHITE,
+        ),  # NOTE White will attempt this en passant, but timing is off
+        (
+            Square.from_algebraic("e3"),
+            Color.BLACK,
+        ),  # NOTE Black will attempt this en passant, but timing is off
+    ],
+)
+def test_illegal_en_passant(
+    en_passant_sq: Square, player_color: Color, kings_only_board: Board
+) -> None:
+    """
+    Attempt to play the en passant move, but simulate timing being off.
+    Your opponent did NOT move their pawn by two squares in the previous move.
+    i.e. no en passant square in the FEN string.
+    """
+    # prepare board position with pawns in correct locations
+    rank_delta = -1 if player_color == Color.WHITE else 1
+    player_pawn_sq = Square(
+        file=en_passant_sq.file + 1, rank=en_passant_sq.rank + rank_delta
+    )
+    opponent_pawn_sq = Square(
+        file=en_passant_sq.file, rank=en_passant_sq.rank + rank_delta
+    )
+    board = kings_only_board
+    player_pawn = (
+        Piece.from_fen("P") if player_color == Color.WHITE else Piece.from_fen("p")
+    )
+    opponent_pawn = (
+        Piece.from_fen("p") if player_color == Color.WHITE else Piece.from_fen("P")
+    )
+    board.place_piece(player_pawn, player_pawn_sq)
+    board.place_piece(opponent_pawn, opponent_pawn_sq)
+
+    # Attempt to play the move, but simulate timing being off. Your opponent did NOT move their pawn by two squares in the previous move.
+    # i.e. no en passant square in the FEN string
+    fen = f"{board.to_fen()} {player_color.name.lower()[0]} - - 0 42"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
+
+    en_passant_move = Move(
+        from_square=player_pawn_sq, to_square=en_passant_sq, is_en_passant=True
+    )
+    with pytest.raises(IllegalMoveError):
+        game.make_move(en_passant_move.to_uci(), f"player_{player_color.name.lower()}")
+
+
+@pytest.mark.parametrize(
+    "pawn_push_file, color", list(product(list("abcdefgh"), [Color.WHITE, Color.BLACK]))
+)
+def test_determine_en_passant_square_after_pawn_push(
+    pawn_push_file: str, color: Color
+) -> None:
+    """If you push your pawn (from the starting position) by two squares, the post-move FEN should include the appropriate en passant square."""
+
+    en_passant_rank = 3 if color == Color.WHITE else 6
+    en_passant_sq = Square.from_algebraic(f"{pawn_push_file}{en_passant_rank}")
+    starting_rank = 2 if color == Color.WHITE else 7
+    pawn_push_delta = 2 if color == Color.WHITE else -2
+
+    # start from canonical starting position, easiest relevant scenario
+    # (of course, it won't ever actually be BLACK to move in this position, but does not affect correctness of test. )
+    fen = f"{STARTING_POSITION} {color.name.lower()[0]} KQkq - 0 42"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
+
+    pawn_push_uci = f"{pawn_push_file}{starting_rank}{pawn_push_file}{starting_rank + pawn_push_delta}"
+    game.make_move(pawn_push_uci, f"player_{color.name.lower()}")
+    assert game.state.en_passant_square == en_passant_sq
 
 
 # --- PROMOTION ---
