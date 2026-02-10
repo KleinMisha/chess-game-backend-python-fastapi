@@ -300,13 +300,16 @@ class Game:
         """
         Call for the proper updates of the Board's position
         """
-        # castling move must displace two pieces on the board, but just add one to the move registry
         if move.move.castling_direction:
             self._update_board_w_castle_move(move.move.castling_direction)
         elif move.move.is_en_passant:
             self._update_board_w_en_passant(move.move)
         else:
             self.board.move_piece(move.move)
+
+        # IF you are promoting a pawn, update the board to have the new piece on the board:
+        if move.move.promote_to:
+            self._promote_pawn(move)
 
     def _update_moves(self, move: Move) -> None:
         self.moves.append(move)
@@ -622,11 +625,11 @@ class Game:
         """Create multiple legal moves --> One for every piece type the pawn can promote into."""
         return pawn_pushes_w_promotion(pawn_push)
 
-    def _promote_pawn(self, move: Move) -> None:
+    def _promote_pawn(self, move: AcceptedMove) -> None:
         """promote the pawn on the target square"""
         # for the type checker
-        assert move.promote_to is not None
-        self.board.promote_piece(move.to_square, to=move.promote_to)
+        assert move.move.promote_to is not None
+        self.board.promote_piece(move.move.to_square, to=move.move.promote_to)
 
     # --- HALF MOVE CLOCK HELPERS ---
     def _is_half_move(self, move: AcceptedMove) -> bool:

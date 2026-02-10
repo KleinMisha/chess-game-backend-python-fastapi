@@ -20,6 +20,7 @@ from src.chess.game import (
     Square,
     Status,
 )
+from src.chess.pieces import PIECE_TO_FEN
 from src.core.exceptions import (
     GameStateError,
     IllegalMoveError,
@@ -52,7 +53,10 @@ def castling_board() -> Board:
 
 @pytest.fixture
 def kings_only_board() -> Board:
-    """Create a board with only kings"""
+    """
+    Create a board with only kings on their canonical starting squares.
+    Because making a move involves inferring if a king is under attack, moves cannot played on a board without one of the kings.
+    """
     board = Board.from_fen(EMPTY_FEN)
     e1 = Square.from_algebraic("e1")
     e8 = Square.from_algebraic("e8")
@@ -1090,6 +1094,50 @@ def test_determine_en_passant_square_after_pawn_push(
 
 
 # --- PROMOTION ---
+@pytest.mark.parametrize(
+    "color, new_type",
+    list(
+        product(
+            [Color.WHITE, Color.BLACK],
+            [PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT, PieceType.QUEEN],
+        )
+    ),
+)
+def test_pawn_promotion(
+    color: Color, new_type: PieceType, kings_only_board: Board
+) -> None:
+    """Push pawn to promotion square and promote to new piece type.
+
+    NOTE given the tests of the methods in moves.py --> just check logic for the a-file. No need to retest all possible files.
+    """
+    # set up the game
+    promotion_rank = 8 if color == Color.WHITE else 1
+    push_by = 1 if color == Color.WHITE else -1
+    pawn_sq = Square.from_algebraic(f"a{promotion_rank - push_by}")
+    promotion_square = Square.from_algebraic(f"a{promotion_rank}")
+
+    board = kings_only_board
+    board.place_piece(Piece(PieceType.PAWN, color), pawn_sq)
+
+    fen = f"{board.to_fen()} {color.name.lower()[0]} KQkq - 0 42"
+    model = GameModel(
+        current_fen=fen,
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status="in progress",
+    )
+    game = Game.from_model(model)
+
+    # push pawn and promote
+    pawn_push = f"{pawn_sq.to_algebraic()}{promotion_square.to_algebraic()}{PIECE_TO_FEN[new_type]}"
+    game.make_move(pawn_push, f"player_{color.name.lower()}")
+
+    # expected scenario
+    board_after_move = deepcopy(kings_only_board)
+    board_after_move.place_piece(Piece(new_type, color), promotion_square)
+    assert game.board.piece(promotion_square) == Piece(new_type, color)
+
 
 # --- CHECK MATE ---
 
