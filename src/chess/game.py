@@ -26,6 +26,7 @@ from src.chess.moves import (
 from src.chess.pieces import AVAILABLE_COLOR_NAMES, Color, Piece, PieceType
 from src.chess.square import Square
 from src.core.exceptions import (
+    GameCreationError,
     GameStateError,
     IllegalMoveError,
     NotYourTurnError,
@@ -60,9 +61,14 @@ class Game:
         # Validation
         status_name = model.status.replace(" ", "_").upper()
         if status_name not in Status.__members__:
-            raise GameStateError(
-                f"Invalid status code: {model.status!r}. \nPick one from {','.join([status.name.lower() for status in Status])}"
+            raise GameCreationError(
+                f"Unknown status code: {model.status!r}. \nPick one from {','.join([status.name.lower() for status in Status])}"
             )
+        for color_name in model.registered_players.keys():
+            if color_name.upper() not in AVAILABLE_COLOR_NAMES:
+                raise GameCreationError(
+                    f"Color {color_name} not in {','.join([c.lower() for c in AVAILABLE_COLOR_NAMES])}."
+                )
 
         # create the Game
         board = Board.from_fen(model.current_fen.split(" ")[0])
@@ -105,8 +111,8 @@ class Game:
         )
         board = Board.from_fen(state.position)
         if color.upper() not in AVAILABLE_COLOR_NAMES:
-            raise GameStateError(
-                f"Cannot create new game. Color {color} not in {','.join([c.lower() for c in AVAILABLE_COLOR_NAMES])}."
+            raise GameCreationError(
+                f"Color {color} not in {','.join([c.lower() for c in AVAILABLE_COLOR_NAMES])}."
             )
         player_color = Color[color.upper()]
         return cls(
