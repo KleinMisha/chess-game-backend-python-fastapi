@@ -12,7 +12,6 @@ from typing import Optional, Self
 from src.chess.board import Board
 from src.chess.castling import CASTLING_RULES, CastlingDirection
 from src.chess.fen import FENState
-from src.chess.game_model import GameModel
 from src.chess.moves import (
     AcceptedMove,
     Move,
@@ -31,6 +30,7 @@ from src.core.exceptions import (
     IllegalMoveError,
     NotYourTurnError,
 )
+from src.core.models import GameModel
 
 
 class Status(Enum):
