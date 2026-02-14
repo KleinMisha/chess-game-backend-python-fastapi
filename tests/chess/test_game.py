@@ -22,6 +22,7 @@ from src.chess.game import (
 )
 from src.chess.pieces import PIECE_TO_FEN
 from src.core.exceptions import (
+    GameCreationError,
     GameStateError,
     IllegalMoveError,
     NotYourTurnError,
@@ -127,7 +128,20 @@ def test_invalid_status_name() -> None:
         registered_players={"white": "player_1", "black": "player_2"},
         status="not_existing",
     )
-    with pytest.raises(GameStateError):
+    with pytest.raises(GameCreationError):
+        _ = Game.from_model(model)
+
+
+def test_invalid_color() -> None:
+    model = GameModel(
+        current_fen=f"{'/'.join(['8'] * 8)} w KQkq - 0 1",
+        history_fen=[],
+        moves_uci=[],
+        registered_players={"blue": "player_1", "rainbow": "player_2"},
+        status="in progress",
+    )
+
+    with pytest.raises(GameCreationError):
         _ = Game.from_model(model)
 
 
@@ -176,7 +190,7 @@ def test_creating_new_game_custom_starting_position(player_color: Color) -> None
 def test_creating_new_game_invalid_color() -> None:
     """Check no new game should get created when the color name is not part of the Color enum, aka. the available piece colors."""
 
-    with pytest.raises(GameStateError):
+    with pytest.raises(GameCreationError):
         Game.new_game("player 1", "rainbow")
 
 
