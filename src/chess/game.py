@@ -6,7 +6,6 @@ passes this information to the service layer, which can then pass it onwards to 
 
 from copy import deepcopy
 from dataclasses import dataclass
-from enum import Enum, auto
 from typing import Optional, Self
 
 from src.chess.board import Board
@@ -31,16 +30,7 @@ from src.core.exceptions import (
     NotYourTurnError,
 )
 from src.core.models import GameModel
-
-
-class Status(Enum):
-    WAITING_FOR_PLAYERS = auto()
-    IN_PROGRESS = auto()
-    CHECKMATE = auto()
-    STALEMATE = auto()
-    DRAW_REPETITION = auto()
-    DRAW_FIFTY_HALF_MOVE_RULE = auto()
-    ABORTED = auto()
+from src.core.shared_types import Status
 
 
 @dataclass

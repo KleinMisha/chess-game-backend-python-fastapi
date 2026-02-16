@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
+from src.db.schema import Status
 from src.db.sql_repository import GameModel, SQLGameRepository
 
 
@@ -15,7 +16,7 @@ def test_create_game(db_session_repo: Session) -> None:
         history_fen=["FEN", "FEN", "FEN", "yep...FEN"],
         moves_uci=["UCI", "x5y7", "mock"],
         registered_players={"white": "player_white", "black": "player_black"},
-        status="game status code",
+        status=Status.IN_PROGRESS,
     )
 
     repo = SQLGameRepository(db_session_repo)
@@ -32,7 +33,7 @@ def test_get_game_by_id(db_session_repo: Session) -> None:
         history_fen=["FEN", "FEN", "FEN", "yep...FEN"],
         moves_uci=["UCI", "x5y7", "mock"],
         registered_players={"white": "player_white", "black": "player_black"},
-        status="game status code",
+        status=Status.IN_PROGRESS,
     )
 
     repo = SQLGameRepository(db_session_repo)
@@ -59,7 +60,7 @@ def test_get_unknown_game(db_session_repo: Session) -> None:
         history_fen=["FEN", "FEN", "FEN", "yep...FEN"],
         moves_uci=["UCI", "x5y7", "mock"],
         registered_players={"white": "player_white", "black": "player_black"},
-        status="game status code",
+        status=Status.IN_PROGRESS,
     )
 
     repo = SQLGameRepository(db_session_repo)
@@ -79,7 +80,7 @@ def test_update_game(db_session_repo: Session) -> None:
         history_fen=[],
         moves_uci=[],
         registered_players={"white": "player_white"},
-        status="waiting for players",
+        status=Status.IN_PROGRESS,
     )
 
     repo = SQLGameRepository(db_session_repo)
@@ -91,7 +92,7 @@ def test_update_game(db_session_repo: Session) -> None:
         history_fen=["FEN"],
         moves_uci=["uci_move"],
         registered_players={"white": "player_white", "black": "player_black"},
-        status="ready for first player to make a move",
+        status=Status.IN_PROGRESS,
     )
     updated_game = repo.update_game(game_id, after)
     assert updated_game is not None
@@ -107,7 +108,7 @@ def test_consecutive_game_updates(db_session_repo: Session) -> None:
         history_fen=[],
         moves_uci=[],
         registered_players={"white": "player_white"},
-        status="waiting for players",
+        status=Status.IN_PROGRESS,
     )
 
     repo = SQLGameRepository(db_session_repo)
@@ -119,7 +120,7 @@ def test_consecutive_game_updates(db_session_repo: Session) -> None:
         history_fen=[],
         moves_uci=[],
         registered_players={"white": "player_white", "black": "player_black"},
-        status="1st update",
+        status=Status.IN_PROGRESS,
     )
 
     second_update = GameModel(
@@ -127,7 +128,7 @@ def test_consecutive_game_updates(db_session_repo: Session) -> None:
         history_fen=["starting FEN"],
         moves_uci=["move_1"],
         registered_players={"white": "player_white", "black": "player_black"},
-        status="2nd update",
+        status=Status.IN_PROGRESS,
     )
 
     third_update = GameModel(
@@ -135,7 +136,7 @@ def test_consecutive_game_updates(db_session_repo: Session) -> None:
         history_fen=["starting FEN", "FEN2"],
         moves_uci=["move_1", "move_2"],
         registered_players={"white": "player_white", "black": "player_black"},
-        status="3rd update",
+        status=Status.IN_PROGRESS,
     )
 
     repo.update_game(game_id, first_update)
@@ -146,9 +147,6 @@ def test_consecutive_game_updates(db_session_repo: Session) -> None:
     after_all_updates = repo.get_game(game_id)
     assert after_all_updates is not None
     assert after_all_updates == third_update
-
-    # additional confirmation here
-    assert after_all_updates.status == "3rd update"
 
 
 def test_attempt_updating_unknown_game(db_session_repo: Session) -> None:
@@ -168,7 +166,7 @@ def test_attempt_updating_unknown_game(db_session_repo: Session) -> None:
         history_fen=["FEN"],
         moves_uci=["uci_move"],
         registered_players={"white": "player_white", "black": "player_black"},
-        status="ready for first player to make a move",
+        status=Status.IN_PROGRESS,
     )
     updated_game = repo.update_game(unknown_id, after)
     assert updated_game is None
@@ -182,7 +180,7 @@ def test_delete_game(db_session_repo: Session) -> None:
         history_fen=["FEN", "FEN", "FEN", "yep...FEN"],
         moves_uci=["UCI", "x5y7", "mock"],
         registered_players={"white": "player_white", "black": "player_black"},
-        status="game status code",
+        status=Status.IN_PROGRESS,
     )
 
     repo = SQLGameRepository(db_session_repo)
