@@ -7,6 +7,8 @@ from uuid import UUID
 from sqlalchemy import JSON
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from src.core.shared_types import Status
+
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -23,7 +25,7 @@ class DBGame(Base):
     history_fen: Mapped[list[str]] = mapped_column(JSON, default=[])
     moves_uci: Mapped[list[str]] = mapped_column(JSON, default=[])
     registered_players: Mapped[dict[str, str]] = mapped_column(JSON)
-    status: Mapped[str]
+    status: Mapped[Status]
     winner: Mapped[
         Optional[str]
     ]  # TODO: check how to deal with this neatly. Game simply computes the winner. So would break GameModel as contract ?
