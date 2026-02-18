@@ -8,6 +8,9 @@ from pydantic import BaseModel, field_validator
 from src.core.exceptions import InvalidRequestError
 from src.core.shared_types import Color, PieceType
 
+PieceColor = str
+PlayerName = str
+
 
 # --- REQUEST MODELS ---
 class CreateGameRequest(BaseModel):
@@ -76,7 +79,7 @@ class DeleteGameRequest(BaseModel):
 # --- RESPONSE MODELS ---
 class GameResponse(BaseModel):
     game_id: UUID
-    players: dict[Color, str]
+    players: dict[PieceColor, PlayerName]
     fen_state: str
     starting_state: str
     move_history: list[str]
