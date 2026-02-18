@@ -19,6 +19,7 @@ from src.chess.game import (
     PieceType,
     Square,
     Status,
+    build_uci,
 )
 from src.chess.pieces import PIECE_TO_FEN
 from src.core.exceptions import (
@@ -1403,3 +1404,29 @@ def test_half_move_clock_draw(kings_only_board: Board) -> None:
     game.make_move("e1e2", "player_white")
     assert game.status == Status.DRAW_FIFTY_HALF_MOVE_RULE
     assert game.winner is None
+
+
+# --- BUILD UCI MOVES ---
+@pytest.mark.parametrize(
+    "from_sq,to_sq,promotion,expected_uci",
+    [
+        # --- Normal moves ---
+        ("e2", "e4", None, "e2e4"),
+        ("g1", "f3", None, "g1f3"),
+        ("a2", "a4", None, "a2a4"),
+        # --- Captures (same UCI format) ---
+        ("e4", "d5", None, "e4d5"),
+        # --- Promotions ---
+        ("e7", "e8", "queen", "e7e8q"),
+        ("e7", "e8", "rook", "e7e8r"),
+        ("e7", "e8", "bishop", "e7e8b"),
+        # --- Knight promotion (special case) ---
+        ("e7", "e8", "knight", "e7e8n"),
+    ],
+)
+def test_build_uci(
+    from_sq: str, to_sq: str, promotion: str | None, expected_uci: str
+) -> None:
+    """Check proper creation of UCI strings by helper function (not tied to Game class)."""
+    uci = build_uci(from_sq, to_sq, promotion)
+    assert uci == expected_uci
