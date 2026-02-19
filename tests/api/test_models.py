@@ -1,12 +1,21 @@
+from uuid import UUID, uuid4
+
 import pytest
 
-from src.api.models import CreateGameRequest
+from src.api.models import CreateGameRequest, MoveRequest
 from src.core.exceptions import InvalidRequestError
 from src.core.shared_types import Color
 
 
+@pytest.fixture
+def mock_id() -> UUID:
+    return uuid4()
+
+
+# -- Validation - CreateGameRequest --
 def test_valid_fen() -> None:
-    """happy path: using a structurally valid FEN"""
+    """Test that CreateGameRequest accepts a valid FEN string."""
+
     valid_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     request = CreateGameRequest(
         player_name="don't hate the player, hate the name.",
@@ -31,4 +40,42 @@ def test_invalid_fen(invalid_fen: str) -> None:
             player_name="don't hate the player, hate the name.",
             color=Color.BLACK,
             starting_fen=invalid_fen,
+        )
+
+
+# -- Validation - MoveRequest --
+def test_valid_square_names(mock_id: UUID) -> None:
+    """Test that MoveRequest accepts correctly written squares in algebraic notation."""
+    e2 = "e2"
+    e4 = "e4"
+    request = MoveRequest(
+        game_id=mock_id, player_name="bladiblidiboo", from_square=e2, to_square=e4
+    )
+    assert request.from_square == e2
+    assert request.to_square == e4
+
+
+def test_invalid_from_square(mock_id: UUID) -> None:
+    """Test that an exception is raised when using invalid square name."""
+    e2 = "e2"
+    nonsense = "nonsense"
+    with pytest.raises(InvalidRequestError):
+        _ = MoveRequest(
+            game_id=mock_id,
+            player_name="bladiblidiboo",
+            from_square=nonsense,
+            to_square=e2,
+        )
+
+
+def test_invalid_to_square(mock_id: UUID) -> None:
+    """Test that an exception is raised when using invalid square name."""
+    e2 = "e2"
+    nonsense = "nonsense"
+    with pytest.raises(InvalidRequestError):
+        _ = MoveRequest(
+            game_id=mock_id,
+            player_name="bladiblidiboo",
+            from_square=e2,
+            to_square=nonsense,
         )
