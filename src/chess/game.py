@@ -95,10 +95,11 @@ class Game:
             history_fen=self.history,
             moves_uci=[move.to_uci() for move in self.moves],
             registered_players={
-                "white": self.players[Color.WHITE],
-                "black": self.players[Color.BLACK],
+                color.name.lower(): self.players[color]
+                for color in [Color.WHITE, Color.BLACK]
+                if color in self.players.keys()
             },
-            status=self.status.name.lower(),
+            status=self.status,
         )
 
     @classmethod
