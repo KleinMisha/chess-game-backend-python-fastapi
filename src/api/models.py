@@ -16,7 +16,7 @@ PlayerName = str
 class CreateGameRequest(BaseModel):
     player_name: str
     color: Color
-    starting_fen: Optional[str]
+    starting_fen: Optional[str] = None
 
     @field_validator("starting_fen")
     @classmethod
@@ -29,6 +29,7 @@ class CreateGameRequest(BaseModel):
             raise InvalidRequestError(
                 "FEN string must contain 6 space-separated parts."
             )
+        return value
 
 
 class JoinGameRequest(BaseModel):
