@@ -30,7 +30,11 @@ class ChessService:
         """First player requested to create a new game."""
 
         # Use info in CreateGameRequest to create a new Game, and convert into GameModel
-        new_game = Game.new_game(player=request.player_name, color=request.color)
+        new_game = Game.new_game(
+            player=request.player_name,
+            color=request.color,
+            starting_fen=request.starting_fen,
+        )
         created_game_data = new_game.to_model()
 
         # Store the GameModel in the repository
