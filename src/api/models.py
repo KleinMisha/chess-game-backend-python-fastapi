@@ -8,12 +8,15 @@ from pydantic import BaseModel, field_validator
 from src.core.exceptions import InvalidRequestError
 from src.core.shared_types import Color, PieceType
 
+PieceColor = str
+PlayerName = str
+
 
 # --- REQUEST MODELS ---
 class CreateGameRequest(BaseModel):
     player_name: str
     color: Color
-    starting_fen: Optional[str]
+    starting_fen: Optional[str] = None
 
     @field_validator("starting_fen")
     @classmethod
@@ -26,6 +29,7 @@ class CreateGameRequest(BaseModel):
             raise InvalidRequestError(
                 "FEN string must contain 6 space-separated parts."
             )
+        return value
 
 
 class JoinGameRequest(BaseModel):
@@ -43,7 +47,7 @@ class MoveRequest(BaseModel):
     player_name: str
     from_square: str
     to_square: str
-    promote_to: Optional[PieceType]
+    promote_to: Optional[PieceType] = None
 
     @field_validator(*["from_square", "to_square"])
     @classmethod
@@ -60,7 +64,7 @@ class MoveRequest(BaseModel):
 
         if not _is_algebraic_notation(value):
             raise InvalidRequestError(
-                f"Cannot interpret from_square: {value!r} as a valid square name."
+                f"Cannot interpret {value!r} as a valid square name."
             )
         return value
 
@@ -76,7 +80,7 @@ class DeleteGameRequest(BaseModel):
 # --- RESPONSE MODELS ---
 class GameResponse(BaseModel):
     game_id: UUID
-    players: dict[Color, str]
+    players: dict[PieceColor, PlayerName]
     fen_state: str
     starting_state: str
     move_history: list[str]

@@ -9,12 +9,12 @@ from src.core.models import GameModel
 class GameRepository(Protocol):
     """Persistence layer orchestration"""
 
-    def get_game(self, game_id: UUID) -> GameModel | None:
-        """Get game by ID, if record exists."""
-        ...
-
     def create_game(self, game: GameModel) -> tuple[GameModel, UUID]:
         """Store new game and return the stored data + newly created game ID."""
+        ...
+
+    def get_game(self, game_id: UUID) -> GameModel | None:
+        """Get game by ID, if record exists."""
         ...
 
     def update_game(self, game_id: UUID, game: GameModel) -> GameModel | None:

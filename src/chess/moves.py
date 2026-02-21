@@ -55,6 +55,7 @@ class Move:
         from_sq = Square.from_algebraic(uci[:2])
         to_sq = Square.from_algebraic(uci[2:4])
 
+        # TODO NOTE this is not 100% correct: If I move my rook somewhere mid-game (and it happens to go from e1 to g1), this is not castling
         # check if this is a castling move for the king
         castling_direction = next(
             (

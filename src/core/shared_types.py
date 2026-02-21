@@ -7,7 +7,7 @@ from enum import StrEnum
 
 class Status(StrEnum):
     WAITING_FOR_PLAYERS = "waiting for players"
-    IN_PROGRESS = "game in progress"
+    IN_PROGRESS = "in progress"
     CHECKMATE = "checkmate"
     STALEMATE = "stalemate"
     DRAW_REPETITION = "draw by repetition"

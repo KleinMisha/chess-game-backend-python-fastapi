@@ -33,6 +33,19 @@ from src.core.models import GameModel
 from src.core.shared_types import Status
 
 
+# Helper method called by Service
+def build_uci(
+    from_square_alg: str,
+    to_square_alg: str,
+    promotion: Optional[str] = None,
+) -> str:
+    """Create a UCI string from source/target squares. (via Move.to_uci())"""
+    from_square = Square.from_algebraic(from_square_alg)
+    to_square = Square.from_algebraic(to_square_alg)
+    promote_to_piece = PieceType[promotion.upper()] if promotion is not None else None
+    return Move(from_square, to_square, promote_to=promote_to_piece).to_uci()
+
+
 @dataclass
 class Game:
     # --- DOMAIN LAYER API CALLED BY SERVICE---
@@ -82,10 +95,11 @@ class Game:
             history_fen=self.history,
             moves_uci=[move.to_uci() for move in self.moves],
             registered_players={
-                "white": self.players[Color.WHITE],
-                "black": self.players[Color.BLACK],
+                color.name.lower(): self.players[color]
+                for color in [Color.WHITE, Color.BLACK]
+                if color in self.players.keys()
             },
-            status=self.status.name.lower(),
+            status=self.status,
         )
 
     @classmethod
