@@ -47,7 +47,7 @@ class MoveRequest(BaseModel):
     player_name: str
     from_square: str
     to_square: str
-    promote_to: Optional[PieceType]
+    promote_to: Optional[PieceType] = None
 
     @field_validator(*["from_square", "to_square"])
     @classmethod
@@ -64,7 +64,7 @@ class MoveRequest(BaseModel):
 
         if not _is_algebraic_notation(value):
             raise InvalidRequestError(
-                f"Cannot interpret from_square: {value!r} as a valid square name."
+                f"Cannot interpret {value!r} as a valid square name."
             )
         return value
 
