@@ -25,6 +25,16 @@ def test_valid_fen() -> None:
     assert request.starting_fen == valid_fen
 
 
+def test_starting_fen_is_optional() -> None:
+    """Should be able to not supply a starting FEN, and validator just returns None."""
+    request = CreateGameRequest(
+        player_name="don't hate the player, hate the name.",
+        color=Color.BLACK,
+        starting_fen=None,
+    )
+    assert request.starting_fen is None
+
+
 @pytest.mark.parametrize(
     "invalid_fen",
     [
@@ -55,27 +65,42 @@ def test_valid_square_names(mock_id: UUID) -> None:
     assert request.to_square == e4
 
 
-def test_invalid_from_square(mock_id: UUID) -> None:
+@pytest.mark.parametrize(
+    "square",
+    [
+        "nonsense",  # anything more than two characters.
+        "11",  # First character is not a letter
+        "aa",  # second character is not a number
+    ],
+)
+def test_invalid_from_square(mock_id: UUID, square: str) -> None:
     """Test that an exception is raised when using invalid square name."""
     e2 = "e2"
-    nonsense = "nonsense"
+
     with pytest.raises(InvalidRequestError):
         _ = MoveRequest(
             game_id=mock_id,
             player_name="bladiblidiboo",
-            from_square=nonsense,
+            from_square=square,
             to_square=e2,
         )
 
 
-def test_invalid_to_square(mock_id: UUID) -> None:
+@pytest.mark.parametrize(
+    "square",
+    [
+        "nonsense",  # anything more than two characters.
+        "11",  # First character is not a letter
+        "aa",  # second character is not a number
+    ],
+)
+def test_invalid_to_square(mock_id: UUID, square: str) -> None:
     """Test that an exception is raised when using invalid square name."""
     e2 = "e2"
-    nonsense = "nonsense"
     with pytest.raises(InvalidRequestError):
         _ = MoveRequest(
             game_id=mock_id,
             player_name="bladiblidiboo",
             from_square=e2,
-            to_square=nonsense,
+            to_square=square,
         )
