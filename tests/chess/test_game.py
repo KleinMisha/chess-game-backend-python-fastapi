@@ -81,7 +81,7 @@ def test_game_creation_from_model_roundtrip() -> None:
         history_fen=[],
         moves_uci=[],
         registered_players={"white": "player_1", "black": "player_2"},
-        status="in_progress",
+        status=Status.IN_PROGRESS,
     )
 
     game = Game.from_model(expected_model)
