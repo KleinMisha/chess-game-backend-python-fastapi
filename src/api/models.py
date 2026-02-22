@@ -33,17 +33,14 @@ class CreateGameRequest(BaseModel):
 
 
 class JoinGameRequest(BaseModel):
-    game_id: UUID
     player_name: str
 
 
 class LegalMovesRequest(BaseModel):
-    game_id: UUID
     player_name: str
 
 
 class MoveRequest(BaseModel):
-    game_id: UUID
     player_name: str
     from_square: str
     to_square: str
@@ -67,14 +64,6 @@ class MoveRequest(BaseModel):
                 f"Cannot interpret {value!r} as a valid square name."
             )
         return value
-
-
-class GetGameRequest(BaseModel):
-    game_id: UUID
-
-
-class DeleteGameRequest(BaseModel):
-    game_id: UUID
 
 
 # --- RESPONSE MODELS ---

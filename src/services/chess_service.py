@@ -4,9 +4,7 @@ from uuid import UUID
 
 from src.api.models import (
     CreateGameRequest,
-    DeleteGameRequest,
     GameResponse,
-    GetGameRequest,
     JoinGameRequest,
     LegalMovesRequest,
     LegalMovesResponse,
@@ -43,11 +41,11 @@ class ChessService:
         # Return a GameResponse
         return self._create_game_response(game_id, stored_game)
 
-    def join_game(self, request: JoinGameRequest) -> GameResponse:
+    def join_game(self, game_id: UUID, request: JoinGameRequest) -> GameResponse:
         """Second player requested to join a game."""
 
         # Retrieve persisted GameModel from repository
-        stored_model = self._fetch_game(request.game_id)
+        stored_model = self._fetch_game(game_id)
 
         # Create a new Game instance from the retrieved GameModel
         game = Game.from_model(stored_model)
@@ -59,26 +57,28 @@ class ChessService:
         with_player_registered = game.to_model()
 
         # store in repository
-        self.repo.update_game(request.game_id, with_player_registered)
+        self.repo.update_game(game_id, with_player_registered)
 
         # Return a GameResponse
-        return self._create_game_response(request.game_id, with_player_registered)
+        return self._create_game_response(game_id, with_player_registered)
 
-    def get_game_state(self, request: GetGameRequest) -> GameResponse:
+    def get_game_state(self, game_id: UUID) -> GameResponse:
         """
         Retrieve current game state.
         ----
         Used in "polling" loop by frontend to check when it is the player's turn for instance.
         """
         # Retrieve persisted GameModel from repository
-        game_model = self._fetch_game(request.game_id)
-        return self._create_game_response(request.game_id, game_model)
+        game_model = self._fetch_game(game_id)
+        return self._create_game_response(game_id, game_model)
 
-    def legal_moves(self, request: LegalMovesRequest) -> LegalMovesResponse:
+    def legal_moves(
+        self, game_id: UUID, request: LegalMovesRequest
+    ) -> LegalMovesResponse:
         """retrieve set of legal moves."""
 
         # Retrieve persisted GameModel from repository
-        stored_model = self._fetch_game(request.game_id)
+        stored_model = self._fetch_game(game_id)
 
         # Create a new Game instance from the retrieved GameModel
         game = Game.from_model(stored_model)
@@ -86,7 +86,7 @@ class ChessService:
         # Compute legal moves
         legal_moves = game.legal_moves(request.player_name)
         return LegalMovesResponse(
-            game_id=request.game_id,
+            game_id=game_id,
             player_name=request.player_name,
             color=next(
                 Color[c.name]
@@ -96,11 +96,11 @@ class ChessService:
             legal_moves=legal_moves,
         )
 
-    def make_move(self, request: MoveRequest) -> GameResponse:
+    def make_move(self, game_id: UUID, request: MoveRequest) -> GameResponse:
         """Make a move attempt."""
 
         # Retrieve persisted GameModel from repository
-        stored_model = self._fetch_game(request.game_id)
+        stored_model = self._fetch_game(game_id)
 
         # Parse data in MoveRequest to UCI notation
         move_uci = build_uci(
@@ -119,10 +119,10 @@ class ChessService:
         after_move = game.to_model()
 
         # store in repository
-        self.repo.update_game(request.game_id, after_move)
+        self.repo.update_game(game_id, after_move)
 
         # Return a GameResponse
-        return self._create_game_response(request.game_id, after_move)
+        return self._create_game_response(game_id, after_move)
 
     def list_games(self) -> None:
         """Show all recorded games.
@@ -132,9 +132,9 @@ class ChessService:
         """
         raise NotImplementedError
 
-    def delete_game(self, request: DeleteGameRequest) -> None:
+    def delete_game(self, game_id: UUID) -> None:
         """Handle a request to delete a Game record."""
-        self.repo.delete_game(request.game_id)
+        self.repo.delete_game(game_id)
 
     # -- Internal helpers --
     def _create_game_response(self, game_id: UUID, model: GameModel) -> GameResponse:
