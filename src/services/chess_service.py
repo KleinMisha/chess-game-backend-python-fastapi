@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from src.api.models import (
+from src.api.v1.models import (
     CreateGameRequest,
     GameResponse,
     JoinGameRequest,
