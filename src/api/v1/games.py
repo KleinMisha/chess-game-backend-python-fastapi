@@ -16,11 +16,12 @@ from src.api.v1.models import (
 from src.db.database import get_db
 from src.db.sql_repository import SQLGameRepository
 from src.services.chess_service import ChessService
+from src.services.game_service import GameService
 
 router = APIRouter()
 
 
-def get_chess_service(db: Session = Depends(get_db)) -> ChessService:
+def get_chess_service(db: Session = Depends(get_db)) -> GameService:
     """Setup dependency injection using FastAPI."""
     repository = SQLGameRepository(db)
     return ChessService(repository)
