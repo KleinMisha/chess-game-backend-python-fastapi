@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from typing import Callable
 
 import uvicorn
@@ -39,16 +40,15 @@ def create_exception_handler(
     return exception_handler
 
 
-def main():
-
-    # ensure all tables are created
+@asynccontextmanager
+async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
+    yield
 
+
+def create_app() -> FastAPI:
     # Create the application
-    app = FastAPI(
-        title=PROJECT_NAME,
-        version=VERSION,
-    )
+    app = FastAPI(title=PROJECT_NAME, version=VERSION, lifespan=lifespan)
 
     # Register routers
     app.include_router(games.router, prefix=API_PREFIX)
@@ -75,11 +75,13 @@ def main():
     app.add_exception_handler(
         GameNotFoundError, handler=create_exception_handler(404, "Game not found.")
     )
+    return app
 
-    # Use uvicorn to run the application
-    # todo move to docker file (as learning experience)
-    uvicorn.run(app, host="0.0.0.0", port=8000)
 
+# setup application
+app = create_app()
 
 if __name__ == "__main__":
-    main()
+    # serve
+    # todo move to docker file (as learning experience)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
