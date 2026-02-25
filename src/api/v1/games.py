@@ -16,12 +16,11 @@ from src.api.v1.models import (
 from src.db.database import get_db
 from src.db.sql_repository import SQLGameRepository
 from src.services.chess_service import ChessService
-from src.services.game_service import GameService
 
 router = APIRouter()
 
 
-def get_chess_service(db: Session = Depends(get_db)) -> GameService:
+def get_chess_service(db: Session = Depends(get_db)) -> ChessService:
     """Setup dependency injection using FastAPI."""
     repository = SQLGameRepository(db)
     return ChessService(repository)
@@ -53,9 +52,10 @@ def get_game_state(
 @router.get("/games/{game_id}/legal-moves", response_model=LegalMovesResponse)
 def legal_moves(
     game_id: UUID,
-    request: LegalMovesRequest,
+    player_name: str,
     service: ChessService = Depends(get_chess_service),
 ) -> LegalMovesResponse:
+    request = LegalMovesRequest(player_name=player_name)
     return service.legal_moves(game_id, request)
 
 
