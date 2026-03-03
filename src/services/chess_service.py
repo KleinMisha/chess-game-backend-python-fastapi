@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from src.api.models import (
+from src.api.v1.models import (
     CreateGameRequest,
     GameResponse,
     JoinGameRequest,
@@ -11,7 +11,7 @@ from src.api.models import (
     MoveRequest,
 )
 from src.chess.game import Game, build_uci
-from src.core.exceptions import RepositoryError
+from src.core.exceptions import GameNotFoundError
 from src.core.models import GameModel
 from src.core.shared_types import Color
 from src.db.repository import GameRepository
@@ -156,5 +156,5 @@ class ChessService:
         """Attempt to find the game in the repository and raise error if it fails."""
         game_model = self.repo.get_game(game_id)
         if game_model is None:
-            raise RepositoryError(f"Game with {game_id=} not found.")
+            raise GameNotFoundError(f"Game with {game_id=} not found.")
         return game_model

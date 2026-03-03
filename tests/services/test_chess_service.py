@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from src.core.exceptions import GameError
+from src.core.exceptions import BaseError
 from src.core.models import GameModel
 from src.core.shared_types import Color, Status
 from src.services.chess_service import (
@@ -106,7 +106,7 @@ def test_create_with_invalid_fen(mock_repository: MockRepository) -> None:
     )
 
     # Test any top-level custom exception is raised (specific exception types are responsibility of other layers)
-    with pytest.raises(GameError):
+    with pytest.raises(BaseError):
         repository = mock_repository
         service = ChessService(repository)
         _ = service.create_new_game(mock_request)
@@ -160,7 +160,7 @@ def test_cannot_join_before_first_player(mock_repository: MockRepository) -> Non
     request = JoinGameRequest(player_name=second_name)
     repository = mock_repository
     service = ChessService(repository)
-    with pytest.raises(GameError):
+    with pytest.raises(BaseError):
         _ = service.join_game(non_existing_game, request)
 
 
@@ -192,7 +192,7 @@ def test_get_existing_game_state(mock_repository: MockRepository) -> None:
 def test_attempt_to_find_unknown_game(mock_repository: MockRepository) -> None:
     """Ensure exception is raised when trying to look up a game with an unknown ID."""
     non_existing_id = uuid4()
-    with pytest.raises(GameError):
+    with pytest.raises(BaseError):
         repository = mock_repository
         service = ChessService(repository)
         _ = service.get_game_state(non_existing_id)
@@ -247,7 +247,7 @@ def test_getting_legal_moves_before_your_turn(mock_repository: MockRepository) -
     _ = service.join_game(create_response.game_id, join_request)
 
     # It is white to move - ask for legal moves for player with BLACK pieces.
-    with pytest.raises(GameError):
+    with pytest.raises(BaseError):
         request = LegalMovesRequest(player_name=player_black)
         _ = service.legal_moves(create_response.game_id, request)
 
@@ -267,7 +267,7 @@ def test_attempt_legal_moves_before_second_player(
     create_response = service.create_new_game(create_request)
 
     # Second player did not join yet - already ask for legal moves.
-    with pytest.raises(GameError):
+    with pytest.raises(BaseError):
         request = LegalMovesRequest(player_name=player_white)
         _ = service.legal_moves(create_response.game_id, request)
 
@@ -298,7 +298,7 @@ def test_attempt_legal_moves_after_checkmate(mock_repository: MockRepository) ->
     _ = service.make_move(create_response.game_id, ladder_mate)
 
     # Game is over: Black cannot request any legal moves
-    with pytest.raises(GameError):
+    with pytest.raises(BaseError):
         request = LegalMovesRequest(player_name=player_black)
 
         _ = service.legal_moves(create_response.game_id, request)
@@ -363,7 +363,7 @@ def test_attempt_illegal_move(mock_repository: MockRepository) -> None:
     _ = service.join_game(create_response.game_id, join_request)
 
     # Attempt an illegal move (some random squares)
-    with pytest.raises(GameError):
+    with pytest.raises(BaseError):
         request = MoveRequest(
             player_name=player_white,
             from_square="d1",
@@ -389,7 +389,7 @@ def test_attempt_move_before_your_turn(mock_repository: MockRepository) -> None:
     _ = service.join_game(create_response.game_id, join_request)
 
     # White to move - Black attempts to move already
-    with pytest.raises(GameError):
+    with pytest.raises(BaseError):
         request = MoveRequest(
             player_name=player_black,
             from_square="a8",
@@ -411,7 +411,7 @@ def test_attempt_move_before_second_player(mock_repository: MockRepository) -> N
     create_response = service.create_new_game(create_request)
 
     # Attempt an illegal move (some random squares)
-    with pytest.raises(GameError):
+    with pytest.raises(BaseError):
         request = MoveRequest(
             player_name=player_white,
             from_square="a1",
@@ -445,7 +445,7 @@ def test_attempt_move_after_checkmate(mock_repository: MockRepository) -> None:
     _ = service.make_move(create_response.game_id, ladder_mate)
 
     # Black should no longer be able to move
-    with pytest.raises(GameError):
+    with pytest.raises(BaseError):
         request = MoveRequest(
             player_name=player_black,
             from_square="a8",
@@ -470,5 +470,5 @@ def test_delete_game_from_repository(mock_repository: MockRepository) -> None:
     service.delete_game(create_response.game_id)
 
     # should no longer exist in repository
-    with pytest.raises(GameError):
+    with pytest.raises(BaseError):
         _ = service.get_game_state(create_response.game_id)

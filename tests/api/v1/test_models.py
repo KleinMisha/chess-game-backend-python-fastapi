@@ -1,15 +1,8 @@
-from uuid import UUID, uuid4
-
 import pytest
 
-from src.api.models import CreateGameRequest, MoveRequest
+from src.api.v1.models import CreateGameRequest, MoveRequest
 from src.core.exceptions import InvalidRequestError
 from src.core.shared_types import Color
-
-
-@pytest.fixture
-def mock_id() -> UUID:
-    return uuid4()
 
 
 # -- Validation - CreateGameRequest --
@@ -54,13 +47,11 @@ def test_invalid_fen(invalid_fen: str) -> None:
 
 
 # -- Validation - MoveRequest --
-def test_valid_square_names(mock_id: UUID) -> None:
+def test_valid_square_names() -> None:
     """Test that MoveRequest accepts correctly written squares in algebraic notation."""
     e2 = "e2"
     e4 = "e4"
-    request = MoveRequest(
-        game_id=mock_id, player_name="bladiblidiboo", from_square=e2, to_square=e4
-    )
+    request = MoveRequest(player_name="bladiblidiboo", from_square=e2, to_square=e4)
     assert request.from_square == e2
     assert request.to_square == e4
 
@@ -73,13 +64,12 @@ def test_valid_square_names(mock_id: UUID) -> None:
         "aa",  # second character is not a number
     ],
 )
-def test_invalid_from_square(mock_id: UUID, square: str) -> None:
+def test_invalid_from_square(square: str) -> None:
     """Test that an exception is raised when using invalid square name."""
     e2 = "e2"
 
     with pytest.raises(InvalidRequestError):
         _ = MoveRequest(
-            game_id=mock_id,
             player_name="bladiblidiboo",
             from_square=square,
             to_square=e2,
@@ -94,12 +84,11 @@ def test_invalid_from_square(mock_id: UUID, square: str) -> None:
         "aa",  # second character is not a number
     ],
 )
-def test_invalid_to_square(mock_id: UUID, square: str) -> None:
+def test_invalid_to_square(square: str) -> None:
     """Test that an exception is raised when using invalid square name."""
     e2 = "e2"
     with pytest.raises(InvalidRequestError):
         _ = MoveRequest(
-            game_id=mock_id,
             player_name="bladiblidiboo",
             from_square=e2,
             to_square=square,

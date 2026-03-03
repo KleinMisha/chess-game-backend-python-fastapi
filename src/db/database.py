@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.db.schema import Base
 
-DATABASE_URL = "ENTER URL IN CONFIG LATER"
+DATABASE_URL = "sqlite:///../../chess_games.db"
 engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(bind=engine)
 
