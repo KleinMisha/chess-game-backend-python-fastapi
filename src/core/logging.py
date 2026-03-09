@@ -3,12 +3,13 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from src.core.config import config
+
 # Logging level is a integer enum: logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL
 LoggingLevel = int
 
 
 ROOT_DIR = base_dir = Path(__file__).resolve().parent.parent.parent
-KEEP_DAYS = 7
 
 
 def setup_logging(level: LoggingLevel) -> None:
@@ -27,7 +28,7 @@ def setup_logging(level: LoggingLevel) -> None:
         ],
     )
 
-    clear_old_logs(KEEP_DAYS)
+    clear_old_logs(config.log_keep_days)
 
 
 def clear_old_logs(keep_days: int) -> None:

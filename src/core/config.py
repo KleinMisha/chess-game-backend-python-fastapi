@@ -11,6 +11,7 @@ class Config(BaseSettings):
     log_level: str = (
         "info"  # choose from: "debug", "info", "warning", "error", "critical"
     )
+    log_keep_days: int = 7
 
     @property
     def api_prefix(self) -> str:
