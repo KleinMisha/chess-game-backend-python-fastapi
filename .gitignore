@@ -14,3 +14,9 @@ wheels/
 coverage.* 
 htmlcov/
 */__pycache__/
+
+# Logs 
+logs/ 
+
+# Database 
+*.db 

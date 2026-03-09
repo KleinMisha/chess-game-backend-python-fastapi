@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from typing import Callable
 
@@ -6,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from src.api.v1 import games, health
+from src.core.config import config
 from src.core.exceptions import (
     AppError,
     BaseError,
@@ -14,12 +16,8 @@ from src.core.exceptions import (
     GameStateError,
     NotYourTurnError,
 )
+from src.core.logging import setup_logging
 from src.db.database import Base, engine
-
-# todo move this into configuration file / environment file (create pydantic settings. )
-PROJECT_NAME = "Chess FastAPI."
-VERSION = "v1"
-API_PREFIX = f"/api/{VERSION}"
 
 
 def create_exception_handler(
@@ -29,6 +27,7 @@ def create_exception_handler(
 
     def exception_handler(_: Request, exc: Exception) -> JSONResponse:
         message = str(exc) if str(exc) else default_message
+        logging.error(f"{type(exc).__name__} : {message}")
         return JSONResponse(
             status_code=status_code,
             content={
@@ -48,11 +47,11 @@ async def lifespan(_: FastAPI):
 
 def create_app() -> FastAPI:
     # Create the application
-    app = FastAPI(title=PROJECT_NAME, version=VERSION, lifespan=lifespan)
+    app = FastAPI(title=config.app_name, version=config.api_version, lifespan=lifespan)
 
     # Register routers
-    app.include_router(games.router, prefix=API_PREFIX)
-    app.include_router(health.router, prefix=API_PREFIX)
+    app.include_router(games.router, prefix=config.api_prefix)
+    app.include_router(health.router, prefix=config.api_prefix)
 
     # Register exception handlers using custom exception hierarchy.
     app.add_exception_handler(
@@ -78,7 +77,8 @@ def create_app() -> FastAPI:
     return app
 
 
-# setup application
+# setup application + cross-cutting concerns
+setup_logging(config.logging_level)
 app = create_app()
 
 if __name__ == "__main__":

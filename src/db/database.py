@@ -5,10 +5,10 @@ from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from src.core.config import config
 from src.db.schema import Base
 
-DATABASE_URL = "sqlite:///../../chess_games.db"
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(config.db_url, echo=config.is_debug)
 SessionLocal = sessionmaker(bind=engine)
 
 # Ensure all tables are created
