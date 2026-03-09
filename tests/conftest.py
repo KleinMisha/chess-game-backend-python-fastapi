@@ -22,24 +22,31 @@ engine = create_engine(
 TestingSessionLocal = sessionmaker(autoflush=False, bind=engine)
 
 
-@pytest.fixture
-def db_session_repo() -> Generator[Session]:
-    """Connection to a test database. Tables are removed at teardown to make unit tests of repository independent of each other."""
+def db_session(clear_db: bool) -> Generator[Session]:
+    """
+    Connect to a test database.
+    -----
+    Test database is in-memory SQLite database.
+    parameters::
+        clear_db [bool] : Remove tables at teardown (when True) or persist tables between calls (when False)
+    """
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
     try:
         yield db
     finally:
-        Base.metadata.drop_all(bind=engine)
+        if clear_db:
+            Base.metadata.drop_all(bind=engine)
         db.close()
+
+
+@pytest.fixture
+def db_session_repo() -> Generator[Session]:
+    """Connection to a test database. Tables are removed at teardown to make unit tests of repository independent of each other."""
+    yield from db_session(clear_db=True)
 
 
 @pytest.fixture
 def db_session_shared() -> Generator[Session]:
     """Connection to a test database. Mock real setup with multiple sessions connecting to the same engine / database tables."""
-    Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    yield from db_session(clear_db=False)
