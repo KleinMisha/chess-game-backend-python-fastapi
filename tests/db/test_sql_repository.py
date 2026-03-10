@@ -8,7 +8,7 @@ from src.db.schema import Status
 from src.db.sql_repository import GameModel, SQLGameRepository
 
 
-def test_create_game(db_session_repo: Session) -> None:
+def test_create_game(db_session: Session) -> None:
     """Conversion from a GameModel to DBGame for a new entry to the database."""
     # Mock game data
     model = GameModel(
@@ -19,13 +19,13 @@ def test_create_game(db_session_repo: Session) -> None:
         status=Status.IN_PROGRESS,
     )
 
-    repo = SQLGameRepository(db_session_repo)
+    repo = SQLGameRepository(db_session)
     record_in_db, _ = repo.create_game(model)
     assert isinstance(record_in_db, GameModel)
     assert record_in_db == model
 
 
-def test_get_game_by_id(db_session_repo: Session) -> None:
+def test_get_game_by_id(db_session: Session) -> None:
     """Create a game, then fetch it from db."""
     # Mock game data
     model = GameModel(
@@ -36,21 +36,21 @@ def test_get_game_by_id(db_session_repo: Session) -> None:
         status=Status.IN_PROGRESS,
     )
 
-    repo = SQLGameRepository(db_session_repo)
+    repo = SQLGameRepository(db_session)
     expected_game, game_id = repo.create_game(model)
     game_found = repo.get_game(game_id)
     assert isinstance(game_found, GameModel)
     assert game_found == expected_game
 
 
-def test_get_unknown_game(db_session_repo: Session) -> None:
+def test_get_unknown_game(db_session: Session) -> None:
     """
     Should return None if ID does not match anything in database.
 
     NOTE with an empty database, any id is a valid test case.
     """
     unknown_id = uuid4()
-    repo = SQLGameRepository(db_session_repo)
+    repo = SQLGameRepository(db_session)
     game_found = repo.get_game(unknown_id)
     assert game_found is None
 
@@ -63,14 +63,14 @@ def test_get_unknown_game(db_session_repo: Session) -> None:
         status=Status.IN_PROGRESS,
     )
 
-    repo = SQLGameRepository(db_session_repo)
+    repo = SQLGameRepository(db_session)
     repo.create_game(model)
     wrong_id = uuid4()
     game_found = repo.get_game(wrong_id)
     assert game_found is None
 
 
-def test_update_game(db_session_repo: Session) -> None:
+def test_update_game(db_session: Session) -> None:
     """
     Update an earlier created record.
     """
@@ -83,7 +83,7 @@ def test_update_game(db_session_repo: Session) -> None:
         status=Status.IN_PROGRESS,
     )
 
-    repo = SQLGameRepository(db_session_repo)
+    repo = SQLGameRepository(db_session)
     _, game_id = repo.create_game(new)
 
     # Update data and check if recorded data matches the data after the update
@@ -99,7 +99,7 @@ def test_update_game(db_session_repo: Session) -> None:
     assert updated_game == after
 
 
-def test_consecutive_game_updates(db_session_repo: Session) -> None:
+def test_consecutive_game_updates(db_session: Session) -> None:
     """Tests that we can successfully make multiple updates to the same game."""
 
     # Create new record
@@ -111,7 +111,7 @@ def test_consecutive_game_updates(db_session_repo: Session) -> None:
         status=Status.IN_PROGRESS,
     )
 
-    repo = SQLGameRepository(db_session_repo)
+    repo = SQLGameRepository(db_session)
     _, game_id = repo.create_game(new)
 
     # make some updates "loosely simulate real scenario"
@@ -149,7 +149,7 @@ def test_consecutive_game_updates(db_session_repo: Session) -> None:
     assert after_all_updates == third_update
 
 
-def test_attempt_updating_unknown_game(db_session_repo: Session) -> None:
+def test_attempt_updating_unknown_game(db_session: Session) -> None:
     """
     the update_game() method should break early and return None
 
@@ -157,7 +157,7 @@ def test_attempt_updating_unknown_game(db_session_repo: Session) -> None:
     NOTE here simply attempt to delete a game from an empty DB. Already confirmed with the above that this is equivalent to fetching from the wrong ID.
     """
 
-    repo = SQLGameRepository(db_session_repo)
+    repo = SQLGameRepository(db_session)
 
     # Update data and check if recorded data matches the data after the update
     unknown_id = uuid4()
@@ -172,7 +172,7 @@ def test_attempt_updating_unknown_game(db_session_repo: Session) -> None:
     assert updated_game is None
 
 
-def test_delete_game(db_session_repo: Session) -> None:
+def test_delete_game(db_session: Session) -> None:
     """Record of the game should no longer exist after deletion"""
     # Mock game data
     model = GameModel(
@@ -183,7 +183,7 @@ def test_delete_game(db_session_repo: Session) -> None:
         status=Status.IN_PROGRESS,
     )
 
-    repo = SQLGameRepository(db_session_repo)
+    repo = SQLGameRepository(db_session)
     created_game, game_id = repo.create_game(model)
     deleted_game = repo.delete_game(game_id)
 
@@ -194,13 +194,13 @@ def test_delete_game(db_session_repo: Session) -> None:
     assert repo.get_game(game_id) is None
 
 
-def test_attempt_deleting_unknown_game(db_session_repo: Session) -> None:
+def test_attempt_deleting_unknown_game(db_session: Session) -> None:
     """
     the delete_game() method should break early and return None
 
     NOTE here simply attempt to delete a game from an empty DB. Already confirmed with the above that this is equivalent to fetching from the wrong ID.
     """
     unknown_id = uuid4()
-    repo = SQLGameRepository(db_session_repo)
+    repo = SQLGameRepository(db_session)
     deleted_game = repo.delete_game(unknown_id)
     assert deleted_game is None
