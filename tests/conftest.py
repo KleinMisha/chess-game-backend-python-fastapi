@@ -22,7 +22,7 @@ engine = create_engine(
 TestingSessionLocal = sessionmaker(autoflush=False, bind=engine)
 
 
-def db_session(clear_db: bool) -> Generator[Session]:
+def db_session(clear_db: bool) -> Generator[Session, None, None]:
     """
     Connect to a test database.
     -----
@@ -41,12 +41,12 @@ def db_session(clear_db: bool) -> Generator[Session]:
 
 
 @pytest.fixture
-def db_session_repo() -> Generator[Session]:
+def db_session_repo() -> Generator[Session, None, None]:
     """Connection to a test database. Tables are removed at teardown to make unit tests of repository independent of each other."""
     yield from db_session(clear_db=True)
 
 
 @pytest.fixture
-def db_session_shared() -> Generator[Session]:
+def db_session_shared() -> Generator[Session, None, None]:
     """Connection to a test database. Mock real setup with multiple sessions connecting to the same engine / database tables."""
     yield from db_session(clear_db=False)
