@@ -473,12 +473,6 @@ def test_white_pawn_push() -> None:
     d4_white = "/".join(["8", "8", "8", "8", "3P4", "8", "8", "8"])
     board = Board.from_fen(d4_white)
     d4 = Square.from_algebraic("d4")
-    up_the_board = [(0, 1)]
-
-    # check wiring
-    with patch.object(mv, "single_step_move") as mock_single_step:
-        moves = candidate_pawn_moves(d4, board)
-        mock_single_step.assert_called_once_with(d4, board, up_the_board)
 
     # check behavior: make sure no typo in directions
     moves = candidate_pawn_moves(d4, board)
@@ -491,17 +485,96 @@ def test_black_pawn_push() -> None:
     d4_black = "/".join(["8", "8", "8", "8", "3p4", "8", "8", "8"])
     board = Board.from_fen(d4_black)
     d4 = Square.from_algebraic("d4")
-    down_the_board = [(0, -1)]
-
-    # check wiring
-    with patch.object(mv, "single_step_move") as mock_single_step:
-        moves = candidate_pawn_moves(d4, board)
-        mock_single_step.assert_called_once_with(d4, board, down_the_board)
 
     # check behavior: make sure no typo in directions
     moves = candidate_pawn_moves(d4, board)
     assert len(moves) == 1
     assert moves[0].to_uci() == "d4d3"
+
+
+def test_double_pawn_push_from_starting_square() -> None:
+    """When in their starting positions (2nd rank for white, 7th rank for black), pawns can move by two squares"""
+    board = Board.from_fen(EMPTY_FEN)
+    e2 = Square.from_algebraic("e2")
+    e7 = Square.from_algebraic("e7")
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+    board.place_piece(white_pawn, e2)
+    board.place_piece(black_pawn, e7)
+
+    # check behavior: make sure no typo in directions
+    moves = candidate_pawn_moves(e2, board)
+    uci_moves = set([move.to_uci() for move in moves])
+    assert len(moves) == 2
+    assert uci_moves == set(["e2e3", "e2e4"])
+
+    moves = candidate_pawn_moves(e7, board)
+    uci_moves = set([move.to_uci() for move in moves])
+    assert len(moves) == 2
+    assert uci_moves == set(["e7e6", "e7e5"])
+
+
+@pytest.mark.parametrize("color", [Color.WHITE, Color.BLACK])
+def test_pawn_push_gets_blocked_by_opponent_piece(color: Color) -> None:
+    """Place a piece of any color in front of the pawn --> no pawn push should be possible"""
+
+    # setup for white to move
+    board = Board.from_fen(EMPTY_FEN)
+    e2 = Square.from_algebraic("e2")
+    e3 = Square.from_algebraic("e3")
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    rook_that_blocks = Piece(PieceType.ROOK, color)
+    board.place_piece(white_pawn, e2)
+    board.place_piece(rook_that_blocks, e3)
+
+    # check no pawn push is allowed
+    moves = candidate_pawn_moves(e2, board)
+    assert moves == []
+
+    # setup for black to move
+    e6 = Square.from_algebraic("e6")
+    e7 = Square.from_algebraic("e7")
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+    bishop_that_blocks = Piece(PieceType.BISHOP, color)
+    board.place_piece(black_pawn, e7)
+    board.place_piece(bishop_that_blocks, e6)
+
+    # check no pawn push is allowed
+    moves = candidate_pawn_moves(e7, board)
+    assert moves == []
+
+
+@pytest.mark.parametrize("color", [Color.WHITE, Color.BLACK])
+def test_double_pawn_push_gets_blocked_by_opponent_piece(color: Color) -> None:
+    """lace a piece two squares away, only double pawn push gets blocked"""
+    # setup for white to move
+    board = Board.from_fen(EMPTY_FEN)
+    e2 = Square.from_algebraic("e2")
+    e4 = Square.from_algebraic("e4")
+    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
+    rook_that_blocks = Piece(PieceType.ROOK, color)
+    board.place_piece(white_pawn, e2)
+    board.place_piece(rook_that_blocks, e4)
+
+    # check no pawn push is allowed
+    moves = candidate_pawn_moves(e2, board)
+    uci_moves = set([move.to_uci() for move in moves])
+    assert len(uci_moves) == 1
+    assert uci_moves == {"e2e3"}
+
+    # setup for black to move
+    e5 = Square.from_algebraic("e5")
+    e7 = Square.from_algebraic("e7")
+    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
+    bishop_that_blocks = Piece(PieceType.BISHOP, color)
+    board.place_piece(black_pawn, e7)
+    board.place_piece(bishop_that_blocks, e5)
+
+    # check no pawn push is allowed
+    moves = candidate_pawn_moves(e7, board)
+    uci_moves = set([move.to_uci() for move in moves])
+    assert len(uci_moves) == 1
+    assert uci_moves == {"e7e6"}
 
 
 def test_white_pawn_takes() -> None:
@@ -549,33 +622,6 @@ def test_pawn_takes_at_edge_of_board() -> None:
     uci_moves = set([move.to_uci() for move in moves])
     assert len(moves) == 2
     assert uci_moves == set(["a3a4", "a3b4"])
-
-
-def test_double_pawn_push_from_starting_square() -> None:
-    """When in their starting positions (2nd rank for white, 7th rank for black), pawns can move by two squares"""
-    board = Board.from_fen(EMPTY_FEN)
-    e2 = Square.from_algebraic("e2")
-    e7 = Square.from_algebraic("e7")
-    white_pawn = Piece(PieceType.PAWN, Color.WHITE)
-    black_pawn = Piece(PieceType.PAWN, Color.BLACK)
-    board.place_piece(white_pawn, e2)
-    board.place_piece(black_pawn, e7)
-
-    # check wiring
-    with patch.object(mv, "single_step_move") as mock_single_step:
-        moves = candidate_pawn_moves(e2, board)
-        assert mock_single_step.call_count == 2
-
-    # check behavior: make sure no typo in directions
-    moves = candidate_pawn_moves(e2, board)
-    uci_moves = set([move.to_uci() for move in moves])
-    assert len(moves) == 2
-    assert uci_moves == set(["e2e3", "e2e4"])
-
-    moves = candidate_pawn_moves(e7, board)
-    uci_moves = set([move.to_uci() for move in moves])
-    assert len(moves) == 2
-    assert uci_moves == set(["e7e6", "e7e5"])
 
 
 def test_pawn_does_not_take_king() -> None:
