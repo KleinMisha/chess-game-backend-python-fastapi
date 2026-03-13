@@ -14,7 +14,7 @@ from src.core.exceptions import (
     IllegalMoveError,
     NotYourTurnError,
 )
-from src.core.shared_types import Color
+from src.core.shared_types import Color, Status
 from src.main import app
 from src.services.chess_service import (
     GameResponse,
@@ -36,6 +36,7 @@ def create_mock_game_response() -> GameResponse:
         fen_state=MOCK_FEN_STATE,
         starting_state=MOCK_FEN_STATE,
         move_history=[],
+        status=Status.IN_PROGRESS,
     )
 
 
