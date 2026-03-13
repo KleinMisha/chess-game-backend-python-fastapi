@@ -169,6 +169,7 @@ class ChessService:
             fen_state=model.current_fen,
             starting_state=starting_fen,
             move_history=model.moves_uci,
+            status=model.status,
         )
 
     def _fetch_game(self, game_id: UUID) -> GameModel:

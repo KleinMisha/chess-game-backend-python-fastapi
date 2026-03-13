@@ -8,6 +8,8 @@ Hence, both the API layer (higher) and domain/db layers (lower) will use model(s
 
 from dataclasses import dataclass
 
+from src.core.shared_types import Status
+
 # Type aliases to make GameModel easier to read
 PieceColor = str
 PlayerName = str
@@ -21,4 +23,4 @@ class GameModel:
     history_fen: list[str]
     moves_uci: list[str]
     registered_players: dict[PieceColor, PlayerName]
-    status: str
+    status: Status
