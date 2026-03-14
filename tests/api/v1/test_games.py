@@ -252,7 +252,7 @@ def test_delete_game() -> None:
 )
 def test_game_not_found_error(
     http_method: str,
-    path: str,
+    endpoint: str,
     payload: dict[str, str] | None,
     service_method: str,
 ) -> None:
@@ -270,12 +270,12 @@ def test_game_not_found_error(
     client_method = getattr(client, http_method)
     if payload:
         response = (
-            client_method(path, json=payload)
+            client_method(endpoint, json=payload)
             if http_method != "get"
-            else client_method(path, params=payload)
+            else client_method(endpoint, params=payload)
         )
     else:
-        response = client_method(path)
+        response = client_method(endpoint)
 
     assert response.status_code == 404
     assert response.json()["error"] == "GameNotFoundError"
