@@ -1,0 +1,38 @@
+# Docker -- ignore copying 'yourself'
+Dockerfile
+.dockerignore 
+docker-compose.yml 
+
+# Git(Hub) 
+.git
+.github
+.gitignore
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Unit-test coverage reports, cache, etc. 
+tests/
+.pytest_cache
+.coverage
+coverage.* 
+htmlcov/
+*/__pycache__/
+
+# Logs 
+logs/ 
+
+# Database 
+*.db
+data/
+
+
+
