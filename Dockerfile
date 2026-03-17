@@ -4,7 +4,7 @@ FROM python:3.13-slim-bookworm AS builder
 
 #  Builder tools + curl 
 RUN apt-get update && apt-get install --no-install-recommends -y \
-    build-essential && \
+    build-essential \
     curl && \
     apt-get clean && rm -rf /var/lib/apt/lists/* 
 
@@ -17,6 +17,7 @@ ENV PATH="/root/.local/bin:$PATH"
 # Directory for application / code within the container + transfer pyproject.toml into it
 WORKDIR /app 
 COPY ./pyproject.toml .
+ 
 
 # Install dependencies using UV 
 RUN uv sync 
@@ -36,6 +37,9 @@ COPY --from=builder /app/.venv .venv
 
 # Expose port for FastAPI
 EXPOSE 8000
+
+# Set up uvicorn environment path to make it available globally 
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Start the Application 
 CMD [ "uvicorn", "src.main:app", "--log-level", "info", "--host" ,"0.0.0.0", "--port", "8000"]
