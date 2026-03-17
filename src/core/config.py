@@ -1,16 +1,18 @@
 import logging
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+
+load_dotenv()
 
 
 class Config(BaseSettings):
-    app_name: str = "Chess FastAPI"
+    app_name: str = "chess-fastapi"
+    app_port: int = 8000
     api_version: str = "v1"
     db_name: str = "chess_games.db"
-    log_level: str = (
-        "info"  # choose from: "debug", "info", "warning", "error", "critical"
-    )
+    log_level: str = "info"
     log_keep_days: int = 7
 
     @property
@@ -21,7 +23,7 @@ class Config(BaseSettings):
     def db_url(self) -> str:
         """place database in project root"""
         base_dir = Path(__file__).resolve().parent.parent.parent
-        return f"sqlite:///{base_dir / self.db_name}"
+        return f"sqlite:///{base_dir / 'data' / self.db_name}"
 
     @property
     def logging_level(self) -> int:
