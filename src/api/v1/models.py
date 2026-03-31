@@ -73,6 +73,7 @@ class GameResponse(BaseModel):
     fen_state: str
     starting_state: str
     move_history: list[str]
+    status: str
 
 
 class LegalMovesResponse(BaseModel):

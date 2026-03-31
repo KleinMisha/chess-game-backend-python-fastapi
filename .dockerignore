@@ -1,3 +1,13 @@
+# Docker -- ignore copying 'yourself'
+Dockerfile
+.dockerignore 
+docker-compose.yml 
+
+# Git(Hub) 
+.git
+.github
+.gitignore
+
 # Python-generated files
 __pycache__/
 *.py[oc]
@@ -10,6 +20,8 @@ wheels/
 .venv
 
 # Unit-test coverage reports, cache, etc. 
+tests/
+.pytest_cache
 .coverage
 coverage.* 
 htmlcov/
@@ -19,4 +31,8 @@ htmlcov/
 logs/ 
 
 # Database 
-*.db 
+*.db
+data/
+
+
+

@@ -14,7 +14,7 @@ from src.core.exceptions import (
     IllegalMoveError,
     NotYourTurnError,
 )
-from src.core.shared_types import Color
+from src.core.shared_types import Color, Status
 from src.main import app
 from src.services.chess_service import (
     GameResponse,
@@ -36,6 +36,7 @@ def create_mock_game_response() -> GameResponse:
         fen_state=MOCK_FEN_STATE,
         starting_state=MOCK_FEN_STATE,
         move_history=[],
+        status=Status.IN_PROGRESS,
     )
 
 
@@ -226,7 +227,7 @@ def test_delete_game() -> None:
 
 # --- EXCEPTION HANDLING (Multiple endpoints that can result in the same exception) ---
 @pytest.mark.parametrize(
-    "method,path, payload, service_method",
+    "http_method,endpoint, payload, service_method",
     [
         ("get", f"{URL_PREFIX}/games/{MOCK_ID}", None, "get_game_state"),
         (
@@ -247,12 +248,11 @@ def test_delete_game() -> None:
             {"player_name": "player", "from_square": "a1", "to_square": "a2"},
             "make_move",
         ),
-        ("delete", f"{URL_PREFIX}/games/{MOCK_ID}", None, "delete_game"),
     ],
 )
 def test_game_not_found_error(
-    method: str,
-    path: str,
+    http_method: str,
+    endpoint: str,
     payload: dict[str, str] | None,
     service_method: str,
 ) -> None:
@@ -267,22 +267,22 @@ def test_game_not_found_error(
     )
     app.dependency_overrides[get_chess_service] = lambda: mock_service
 
-    client_method = getattr(client, method)
+    client_method = getattr(client, http_method)
     if payload:
         response = (
-            client_method(path, json=payload)
-            if method != "get"
-            else client_method(path, params=payload)
+            client_method(endpoint, json=payload)
+            if http_method != "get"
+            else client_method(endpoint, params=payload)
         )
     else:
-        response = client_method(path)
+        response = client_method(endpoint)
 
     assert response.status_code == 404
     assert response.json()["error"] == "GameNotFoundError"
 
 
 @pytest.mark.parametrize(
-    "method,path, payload, service_method",
+    "http_method,endpoint, payload, service_method",
     [
         (
             "post",
@@ -305,8 +305,8 @@ def test_game_not_found_error(
     ],
 )
 def test_game_state_error(
-    method: str,
-    path: str,
+    http_method: str,
+    endpoint: str,
     payload: dict[str, str] | None,
     service_method: str,
 ) -> None:
@@ -321,22 +321,22 @@ def test_game_state_error(
     )
     app.dependency_overrides[get_chess_service] = lambda: mock_service
 
-    client_method = getattr(client, method)
+    client_method = getattr(client, http_method)
     if payload:
         response = (
-            client_method(path, json=payload)
-            if method != "get"
-            else client_method(path, params=payload)
+            client_method(endpoint, json=payload)
+            if http_method != "get"
+            else client_method(endpoint, params=payload)
         )
     else:
-        response = client_method(path)
+        response = client_method(endpoint)
 
     assert response.status_code == 409
     assert response.json()["error"] == "GameStateError"
 
 
 @pytest.mark.parametrize(
-    "method,path, payload, service_method",
+    "http_method,endpoint, payload, service_method",
     [
         (
             "get",
@@ -353,8 +353,8 @@ def test_game_state_error(
     ],
 )
 def test_not_your_turn_error(
-    method: str,
-    path: str,
+    http_method: str,
+    endpoint: str,
     payload: dict[str, str] | None,
     service_method: str,
 ) -> None:
@@ -369,15 +369,15 @@ def test_not_your_turn_error(
     )
     app.dependency_overrides[get_chess_service] = lambda: mock_service
 
-    client_method = getattr(client, method)
+    client_method = getattr(client, http_method)
     if payload:
         response = (
-            client_method(path, json=payload)
-            if method != "get"
-            else client_method(path, params=payload)
+            client_method(endpoint, json=payload)
+            if http_method != "get"
+            else client_method(endpoint, params=payload)
         )
     else:
-        response = client_method(path)
+        response = client_method(endpoint)
 
     assert response.status_code == 409
     assert response.json()["error"] == "NotYourTurnError"

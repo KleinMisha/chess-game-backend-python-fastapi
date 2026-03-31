@@ -1,5 +1,6 @@
 """Orchestration of communication from API router to business logic and persistence layers (and the reverse direction)."""
 
+import logging
 from uuid import UUID
 
 from src.api.v1.models import (
@@ -33,10 +34,15 @@ class ChessService:
             color=request.color,
             starting_fen=request.starting_fen,
         )
+
         created_game_data = new_game.to_model()
+        logging.info(
+            f"Game instantiated by player: {request.player_name} - {request.color} pieces."
+        )
 
         # Store the GameModel in the repository
         stored_game, game_id = self.repo.create_game(created_game_data)
+        logging.info(f"Created new game record with id: {game_id}")
 
         # Return a GameResponse
         return self._create_game_response(game_id, stored_game)
@@ -46,6 +52,7 @@ class ChessService:
 
         # Retrieve persisted GameModel from repository
         stored_model = self._fetch_game(game_id)
+        logging.info(f"Game retrieved from repository with id: {game_id}")
 
         # Create a new Game instance from the retrieved GameModel
         game = Game.from_model(stored_model)
@@ -55,9 +62,13 @@ class ChessService:
 
         # Capture updated state in GameModel
         with_player_registered = game.to_model()
+        logging.info(
+            f"Registered player {request.player_name} at game with id: {game_id}"
+        )
 
         # store in repository
         self.repo.update_game(game_id, with_player_registered)
+        logging.info(f"Updated recorded game with id: {game_id}")
 
         # Return a GameResponse
         return self._create_game_response(game_id, with_player_registered)
@@ -70,6 +81,7 @@ class ChessService:
         """
         # Retrieve persisted GameModel from repository
         game_model = self._fetch_game(game_id)
+        logging.info(f"Retrieved game from repository with id: {game_id}")
         return self._create_game_response(game_id, game_model)
 
     def legal_moves(
@@ -79,12 +91,15 @@ class ChessService:
 
         # Retrieve persisted GameModel from repository
         stored_model = self._fetch_game(game_id)
+        logging.info(f"Retrieved game from repository with id: {game_id}")
 
         # Create a new Game instance from the retrieved GameModel
         game = Game.from_model(stored_model)
 
         # Compute legal moves
         legal_moves = game.legal_moves(request.player_name)
+        logging.info(f"Computed legal moves for player: {request.player_name}")
+
         return LegalMovesResponse(
             game_id=game_id,
             player_name=request.player_name,
@@ -101,6 +116,7 @@ class ChessService:
 
         # Retrieve persisted GameModel from repository
         stored_model = self._fetch_game(game_id)
+        logging.info(f"Retrieved game from repository with id: {game_id}")
 
         # Parse data in MoveRequest to UCI notation
         move_uci = build_uci(
@@ -114,12 +130,14 @@ class ChessService:
 
         # Attempt the move
         game.make_move(move_uci, request.player_name)
+        logging.info(f"Player {request.player_name} made move: {move_uci}")
 
         # Capture updated state in GameModel
         after_move = game.to_model()
 
         # store in repository
         self.repo.update_game(game_id, after_move)
+        logging.info(f"Updated recorded game with id: {game_id}")
 
         # Return a GameResponse
         return self._create_game_response(game_id, after_move)
@@ -135,6 +153,7 @@ class ChessService:
     def delete_game(self, game_id: UUID) -> None:
         """Handle a request to delete a Game record."""
         self.repo.delete_game(game_id)
+        logging.info(f"Deleted record of game with id: {game_id}")
 
     # -- Internal helpers --
     def _create_game_response(self, game_id: UUID, model: GameModel) -> GameResponse:
@@ -150,11 +169,13 @@ class ChessService:
             fen_state=model.current_fen,
             starting_state=starting_fen,
             move_history=model.moves_uci,
+            status=model.status,
         )
 
     def _fetch_game(self, game_id: UUID) -> GameModel:
         """Attempt to find the game in the repository and raise error if it fails."""
         game_model = self.repo.get_game(game_id)
+        id = str(game_id)
         if game_model is None:
-            raise GameNotFoundError(f"Game with {game_id=} not found.")
+            raise GameNotFoundError(f"Game with {id=} not found.")
         return game_model
