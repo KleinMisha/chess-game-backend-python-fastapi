@@ -74,7 +74,7 @@ class GameResponse(BaseModel):
     starting_state: str
     move_history: list[str]
     status: str
-    winner: Optional[PieceColor]
+    winner: Optional[PlayerName]
 
 
 class LegalMovesResponse(BaseModel):
