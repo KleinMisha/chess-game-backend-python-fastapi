@@ -37,6 +37,7 @@ def create_mock_game_response() -> GameResponse:
         starting_state=MOCK_FEN_STATE,
         move_history=[],
         status=Status.IN_PROGRESS,
+        winner=None,
     )
 
 

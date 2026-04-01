@@ -41,8 +41,11 @@ class ChessService:
         )
 
         # Store the GameModel in the repository
-        stored_game, game_id = self.repo.create_game(created_game_data)
+        stored_model, game_id = self.repo.create_game(created_game_data)
         logging.info(f"Created new game record with id: {game_id}")
+
+        # Reconstruct game from stored GameModel (to compute winner, etc.)
+        stored_game = Game.from_model(stored_model)
 
         # Return a GameResponse
         return self._create_game_response(game_id, stored_game)
@@ -71,7 +74,7 @@ class ChessService:
         logging.info(f"Updated recorded game with id: {game_id}")
 
         # Return a GameResponse
-        return self._create_game_response(game_id, with_player_registered)
+        return self._create_game_response(game_id, game)
 
     def get_game_state(self, game_id: UUID) -> GameResponse:
         """
@@ -82,7 +85,9 @@ class ChessService:
         # Retrieve persisted GameModel from repository
         game_model = self._fetch_game(game_id)
         logging.info(f"Retrieved game from repository with id: {game_id}")
-        return self._create_game_response(game_id, game_model)
+
+        game = Game.from_model(game_model)
+        return self._create_game_response(game_id, game)
 
     def legal_moves(
         self, game_id: UUID, request: LegalMovesRequest
@@ -140,7 +145,7 @@ class ChessService:
         logging.info(f"Updated recorded game with id: {game_id}")
 
         # Return a GameResponse
-        return self._create_game_response(game_id, after_move)
+        return self._create_game_response(game_id, game)
 
     def list_games(self) -> None:
         """Show all recorded games.
@@ -156,8 +161,11 @@ class ChessService:
         logging.info(f"Deleted record of game with id: {game_id}")
 
     # -- Internal helpers --
-    def _create_game_response(self, game_id: UUID, model: GameModel) -> GameResponse:
+    def _create_game_response(self, game_id: UUID, game: Game) -> GameResponse:
         """Convert info in GameModel to a GameResponse (for game with given ID.)"""
+
+        # retrieve GameModel data
+        model = game.to_model()
 
         # Before the first turn gets played, the starting FEN equals the current FEN. Otherwise get it as first recorded FEN in history.
         starting_fen = (
@@ -170,6 +178,7 @@ class ChessService:
             starting_state=starting_fen,
             move_history=model.moves_uci,
             status=model.status,
+            winner=game.winner,
         )
 
     def _fetch_game(self, game_id: UUID) -> GameModel:
