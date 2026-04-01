@@ -228,6 +228,7 @@ def test_make_legal_move(client: TestClient) -> None:
     assert retrieved_game_data["move_history"] == [
         f"{sq_from}{sq_to}" for (sq_from, sq_to) in moves
     ]
+    assert retrieved_game_data["winner"] is None
 
 
 def test_delete_game(client: TestClient) -> None:
@@ -345,6 +346,7 @@ def test_playing_five_turns(client: TestClient) -> None:
     )
     assert retrieved_game_data["starting_state"] == CANONICAL_STARTING_FEN
     assert retrieved_game_data["move_history"] == expected_moves
+    assert retrieved_game_data["winner"] is None
 
 
 # --- ERROR PATHS INTEGRATION TESTS ---
@@ -389,6 +391,7 @@ def test_no_move_after_checkmate(client: TestClient) -> None:
 
     retrieved_game_data = response.json()
     assert retrieved_game_data["status"] == "checkmate"
+    assert retrieved_game_data["winner"] == "WinnerWinnerChickenDinner"
 
     # Now white should not be able to move anymore
     response = client.post(
@@ -442,6 +445,7 @@ def test_no_move_after_stalemate(client: TestClient) -> None:
 
     retrieved_game_data = response.json()
     assert retrieved_game_data["status"] == "stalemate"
+    assert retrieved_game_data["winner"] is None
 
     # Now white should not be able to move anymore
     response = client.post(

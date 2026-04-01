@@ -295,7 +295,8 @@ def test_attempt_legal_moves_after_checkmate(mock_repository: MockRepository) ->
         from_square="h7",
         to_square="h8",
     )
-    _ = service.make_move(create_response.game_id, ladder_mate)
+    response_after_mate = service.make_move(create_response.game_id, ladder_mate)
+    assert response_after_mate.winner == player_white
 
     # Game is over: Black cannot request any legal moves
     with pytest.raises(BaseError):
@@ -337,6 +338,7 @@ def test_make_legal_move(mock_repository: MockRepository) -> None:
     assert response.fen_state == "k7/8/8/8/8/8/K7/8 b - - 9 24"
     assert response.starting_state == "k7/8/8/8/8/8/8/K7 w - - 8 24"
     assert response.move_history == ["a1a2"]
+    assert response.winner is None
 
     # Check persisted data
     stored_game = repository.get_game(response.game_id)
@@ -442,7 +444,44 @@ def test_attempt_move_after_checkmate(mock_repository: MockRepository) -> None:
         from_square="h7",
         to_square="h8",
     )
-    _ = service.make_move(create_response.game_id, ladder_mate)
+    response_after_mate = service.make_move(create_response.game_id, ladder_mate)
+    assert response_after_mate.winner == player_white
+
+    # Black should no longer be able to move
+    with pytest.raises(BaseError):
+        request = MoveRequest(
+            player_name=player_black,
+            from_square="a8",
+            to_square="a7",
+        )
+        _ = service.make_move(create_response.game_id, request)
+
+
+def test_attempt_move_after_stalemate(mock_repository: MockRepository) -> None:
+    """Service must propagate error raised by Game upwards."""
+
+    player_white = "Whitey McWhite"
+    create_request = CreateGameRequest(
+        player_name=player_white,
+        color=Color.WHITE,
+        starting_fen="k7/6R1/7R/8/8/8/K7/8 w - - 0 1",
+    )
+    repository = mock_repository
+    service = ChessService(repository)
+    create_response = service.create_new_game(create_request)
+
+    player_black = "Blackey McBlack"
+    join_request = JoinGameRequest(player_name=player_black)
+    _ = service.join_game(create_response.game_id, join_request)
+
+    # White forces stalemate:
+    stalemate = MoveRequest(
+        player_name=player_white,
+        from_square="h6",
+        to_square="b6",
+    )
+    response_after_stalemate = service.make_move(create_response.game_id, stalemate)
+    assert response_after_stalemate.winner is None
 
     # Black should no longer be able to move
     with pytest.raises(BaseError):
