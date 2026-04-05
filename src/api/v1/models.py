@@ -16,6 +16,7 @@ PlayerName = str
 class CreateGameRequest(BaseModel):
     player_name: str
     color: Color
+    game_name: Optional[str] = None
     starting_fen: Optional[str] = None
 
     @field_validator("starting_fen")
