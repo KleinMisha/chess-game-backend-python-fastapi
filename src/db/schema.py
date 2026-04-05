@@ -21,7 +21,7 @@ class Base(DeclarativeBase):
 class DBGame(Base):
     __tablename__ = "games"
     id: Mapped[UUID] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(unique=True, nullable=True)
+    name: Mapped[Optional[str]] = mapped_column(unique=True, nullable=True)
     current_fen: Mapped[str]
     history_fen: Mapped[list[str]] = mapped_column(JSON, default=[])
     moves_uci: Mapped[list[str]] = mapped_column(JSON, default=[])
