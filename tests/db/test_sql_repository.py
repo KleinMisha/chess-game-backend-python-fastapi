@@ -2,10 +2,24 @@
 
 from uuid import uuid4
 
+import pytest
 from sqlalchemy.orm import Session
 
-from src.db.schema import Status
+from src.db.schema import Base, Status
 from src.db.sql_repository import GameModel, SQLGameRepository
+
+
+@pytest.fixture(autouse=True)
+def clear_db(db_session: Session) -> None:
+    """
+    Drops all tables (and creates them from scratch) between unit tests.
+    Ensures unit tests all start from a clean slate that does not share data.
+    """
+    # Delete all tables
+    Base.metadata.drop_all(db_session.get_bind())
+
+    # Recreate / Start from scratch
+    Base.metadata.create_all(db_session.get_bind())
 
 
 def test_create_game(db_session: Session) -> None:
@@ -204,3 +218,29 @@ def test_attempt_deleting_unknown_game(db_session: Session) -> None:
     repo = SQLGameRepository(db_session)
     deleted_game = repo.delete_game(unknown_id)
     assert deleted_game is None
+
+
+def test_name_exists_true_if_present(db_session: Session) -> None:
+    """Correctly identify there already is a record with this name."""
+    model = GameModel(
+        current_fen="FEN string",
+        history_fen=["FEN", "FEN", "FEN", "yep...FEN"],
+        moves_uci=["UCI", "x5y7", "mock"],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status=Status.IN_PROGRESS,
+    )
+
+    game_name = "my-game"
+    repo = SQLGameRepository(db_session)
+    _ = repo.create_game(model, name=game_name)
+    assert repo.name_exists(game_name)
+
+
+def test_name_exists_false_if_absent(db_session: Session) -> None:
+    """Correctly identify the suggested name is unique.
+
+    NOTE: simply never create the game in the fist place ensures it does not exist in db.
+    """
+    game_name = "my-game"
+    repo = SQLGameRepository(db_session)
+    assert not repo.name_exists(game_name)
