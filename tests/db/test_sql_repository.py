@@ -1,6 +1,6 @@
 """Unit tests for src/db/sql_repository.py"""
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy.orm import Session
@@ -220,6 +220,26 @@ def test_attempt_deleting_unknown_game(db_session: Session) -> None:
     assert deleted_game is None
 
 
+# --- ALLOW FOR GAME NAME ALIASES ----
+
+
+def test_create_game_with_name(db_session: Session) -> None:
+    """Conversion from a GameModel to DBGame for a new entry to the database."""
+    # Mock game data
+    model = GameModel(
+        current_fen="FEN string",
+        history_fen=["FEN", "FEN", "FEN", "yep...FEN"],
+        moves_uci=["UCI", "x5y7", "mock"],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status=Status.IN_PROGRESS,
+    )
+
+    repo = SQLGameRepository(db_session)
+    record_in_db, _ = repo.create_game(model, name="my-game")
+    assert isinstance(record_in_db, GameModel)
+    assert record_in_db == model
+
+
 def test_name_exists_true_if_present(db_session: Session) -> None:
     """Correctly identify there already is a record with this name."""
     model = GameModel(
@@ -237,10 +257,41 @@ def test_name_exists_true_if_present(db_session: Session) -> None:
 
 
 def test_name_exists_false_if_absent(db_session: Session) -> None:
-    """Correctly identify the suggested name is unique.
+    """
+    Correctly identify the suggested name is unique.
 
     NOTE: simply never create the game in the fist place ensures it does not exist in db.
     """
     game_name = "my-game"
     repo = SQLGameRepository(db_session)
     assert not repo.name_exists(game_name)
+
+
+def test_game_id_by_name(db_session: Session) -> None:
+    """Should return the expected UUID."""
+    model = GameModel(
+        current_fen="FEN string",
+        history_fen=["FEN", "FEN", "FEN", "yep...FEN"],
+        moves_uci=["UCI", "x5y7", "mock"],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status=Status.IN_PROGRESS,
+    )
+
+    game_name = "my-game"
+    repo = SQLGameRepository(db_session)
+    _, expected_id = repo.create_game(model, name=game_name)
+    found_id = repo.get_id_by_name(game_name)
+    assert isinstance(found_id, UUID)
+    assert found_id == expected_id
+
+
+def test_game_id_by_name_returns_none_if_absent(db_session: Session) -> None:
+    """
+    If return None if no record is found (can be used in other layers to raise exception).
+
+    NOTE: simply never create the game in the fist place ensures it does not exist in db.
+    """
+    game_name = "my-game"
+    repo = SQLGameRepository(db_session)
+    found_id = repo.get_id_by_name(game_name)
+    assert found_id is None

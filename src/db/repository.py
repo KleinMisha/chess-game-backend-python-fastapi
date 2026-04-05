@@ -24,3 +24,11 @@ class GameRepository(Protocol):
     def delete_game(self, game_id: UUID) -> GameModel | None:
         """Remove a game's record."""
         ...
+
+    def name_exists(self, name: str) -> bool:
+        """Check if there already is a record with the suggested alias."""
+        ...
+
+    def get_id_by_name(self, name: str) -> UUID | None:
+        """Find the game ID with the given name (alias)."""
+        ...
