@@ -21,13 +21,11 @@ class Base(DeclarativeBase):
 class DBGame(Base):
     __tablename__ = "games"
     id: Mapped[UUID] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(unique=True, nullable=True)
     current_fen: Mapped[str]
     history_fen: Mapped[list[str]] = mapped_column(JSON, default=[])
     moves_uci: Mapped[list[str]] = mapped_column(JSON, default=[])
     registered_players: Mapped[dict[str, str]] = mapped_column(JSON)
     status: Mapped[Status]
-    winner: Mapped[
-        Optional[str]
-    ]  # TODO: check how to deal with this neatly. Game simply computes the winner. So would break GameModel as contract ?
     created_at: Mapped[datetime] = mapped_column(default=utc_now())
     updated_at: Mapped[datetime] = mapped_column(default=utc_now(), onupdate=utc_now())
