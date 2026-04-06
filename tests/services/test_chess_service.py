@@ -11,6 +11,7 @@ from src.core.shared_types import Color, Status
 from src.services.chess_service import (
     ChessService,
     CreateGameRequest,
+    GameNameID,
     GameResponse,
     JoinGameRequest,
     LegalMovesRequest,
@@ -68,6 +69,16 @@ class MockRepository:
         return next(
             (name for name in self._names if self._names[name] == game_id), None
         )
+
+    def get_all_name_id_pairs(self) -> list[tuple[str | None, UUID]]:
+        """Returns all registered game name / game id pairs."""
+        pairs: list[tuple[str | None, UUID]] = []
+        for game_id in self._games:
+            game_name = next(
+                (name for name in self._names if self._names[name] == game_id), None
+            )
+            pairs.append((game_name, game_id))
+        return pairs
 
     def clear(self) -> None:
         """Clear the repository (useful in between tests)"""
@@ -758,3 +769,46 @@ def test_delete_game_from_repository(mock_repository: MockRepository) -> None:
     # should no longer exist in repository
     with pytest.raises(BaseError):
         _ = service.get_game_state(str(create_response.game_id))
+
+
+# --- SERVICE - GET NAME/ID PAIRS ---
+def test_get_all_name_id_pairs(mock_repository: MockRepository) -> None:
+    """Get a list of all GameNameID models (simple model with a name and uuid field)"""
+    repository = mock_repository
+    service = ChessService(repository)
+
+    # create a couple of games with names
+    create_request = CreateGameRequest(
+        player_name="Mocker McMocker", color=Color.WHITE, game_name="first-game"
+    )
+    response = service.create_new_game(create_request)
+    first_id = response.game_id
+
+    create_request = CreateGameRequest(
+        player_name="Mocker McMocker", color=Color.WHITE, game_name="second-game"
+    )
+    response = service.create_new_game(create_request)
+    second_id = response.game_id
+
+    # create one game without a specified name
+    create_request = CreateGameRequest(
+        player_name="Mocker McMocker",
+        color=Color.BLACK,
+    )
+    response = service.create_new_game(create_request)
+    third_id = response.game_id
+
+    # fetch all the pairs
+    game_name_id_pairs = service.get_all_name_id_pairs()
+    expected_pairs: list[tuple[str | None, UUID]] = [
+        ("first-game", first_id),
+        ("second-game", second_id),
+        (None, third_id),
+    ]
+    expected_models: list[GameNameID] = [
+        GameNameID(name=name, uuid=uuid) for (name, uuid) in expected_pairs
+    ]
+    assert all([isinstance(g, GameNameID) for g in game_name_id_pairs])
+    assert set([(g.name, g.uuid) for g in game_name_id_pairs]) == set(
+        [(e.name, e.uuid) for e in expected_models]
+    )
