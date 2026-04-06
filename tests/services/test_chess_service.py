@@ -550,8 +550,10 @@ def test_attempt_legal_moves_after_checkmate(mock_repository: MockRepository) ->
 # --- SERVICE - MAKE MOVE ---
 def test_make_legal_move(mock_repository: MockRepository) -> None:
     """Attempt a legal move during your turn. Should result in a GameResponse."""
+    game_name = "my-game"
     player_white = "Whitey McWhite"
     create_request = CreateGameRequest(
+        game_name=game_name,
         player_name=player_white,
         color=Color.WHITE,
         starting_fen="k7/8/8/8/8/8/8/K7 w - - 8 24",
@@ -581,6 +583,7 @@ def test_make_legal_move(mock_repository: MockRepository) -> None:
     assert response.starting_state == "k7/8/8/8/8/8/8/K7 w - - 8 24"
     assert response.move_history == ["a1a2"]
     assert response.winner is None
+    assert response.game_name == game_name
 
     # Check persisted data
     stored_game = repository.get_game(response.game_id)
