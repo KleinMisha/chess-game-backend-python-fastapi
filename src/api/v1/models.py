@@ -1,5 +1,6 @@
 """Requests and Response models"""
 
+import logging
 from typing import Optional
 from uuid import UUID
 
@@ -27,6 +28,7 @@ class CreateGameRequest(BaseModel):
 
         parts = value.strip().split(" ")
         if len(parts) != 6:
+            logging.error("FEN string must contain 6 space-separated parts.")
             raise InvalidRequestError(
                 "FEN string must contain 6 space-separated parts."
             )
@@ -61,6 +63,7 @@ class MoveRequest(BaseModel):
             return True
 
         if not _is_algebraic_notation(value):
+            logging.error(f"Cannot interpret {value!r} as a valid square name.")
             raise InvalidRequestError(
                 f"Cannot interpret {value!r} as a valid square name."
             )
