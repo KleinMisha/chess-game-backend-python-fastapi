@@ -13,7 +13,7 @@ from src.api.v1.models import (
     MoveRequest,
 )
 from src.chess.game import Game, build_uci
-from src.core.exceptions import GameNotFoundError, NameNotUniqueError
+from src.core.exceptions import GameCreationError, GameNotFoundError
 from src.core.models import GameModel
 from src.core.shared_types import Color
 from src.db.repository import GameRepository
@@ -31,7 +31,7 @@ class ChessService:
         # If a name is supplied, check if this name is allowed. Otherwise, early exit
         game_name = self._prepare_name(request.game_name)
         if game_name and not self._is_unique(game_name):
-            raise NameNotUniqueError(f"Game with name: {game_name} already exists.")
+            raise GameCreationError(f"Game with name '{game_name}' already exists.")
 
         # Use info in CreateGameRequest to create a new Game, and convert into GameModel
         new_game = Game.new_game(
