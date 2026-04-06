@@ -107,7 +107,6 @@ class Board:
 
     def empty_squares(self) -> list[Square]:
         """Convenience method: Will call this one the most probably"""
-        # TODO: If I ONLY need this version, just remove the previous method and move the logic into here
         return self.locate_pieces(PieceType.EMPTY)
 
     def is_any_occupied(self, squares: Iterable[Square]) -> bool:

@@ -15,7 +15,6 @@ class Status(StrEnum):
 
 
 # --- Color and PieceType DO NOT contain options for empty squares. Moved that to src/chess/squares.py
-# --- # TODO refactor Piece class to accept Optional[PieceType] and Optional[Color], then should change some of the checks/logic in moves.py. But hopefully doable
 # --- NOTE For now, just use the same names (Color and PieceType) as that reads clearly and let the imports show which versions are used in what part of the code
 
 

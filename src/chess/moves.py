@@ -55,7 +55,6 @@ class Move:
         from_sq = Square.from_algebraic(uci[:2])
         to_sq = Square.from_algebraic(uci[2:4])
 
-        # TODO NOTE this is not 100% correct: If I move my rook somewhere mid-game (and it happens to go from e1 to g1), this is not castling
         # check if this is a castling move for the king
         castling_direction = next(
             (
@@ -515,8 +514,6 @@ def squares_between_on_rank(from_square: Square, to_square: Square) -> list[Squa
     """
 
     if from_square.rank != to_square.rank:
-        # todo  check if worth making this a custom error. It is right in between
-        # todo "expected error by invalid input" and "incorrect programming / should never happen if backend is done well"
         raise ValueError(
             f"squares_between_on_rank requires both squares to lie on the same rank. \n from: {from_square}\n to:{to_square}"
         )

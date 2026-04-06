@@ -724,9 +724,8 @@ def test_make_illegal_move(client: TestClient) -> None:
 
 def test_legal_moves_unknown_player_name() -> None:
     """
-    TODO Raise a UnregisteredPlayerError when assertion of your turn fails because the player is not listed at all.
     NOTE this is conceptually different from "it is your opponent's turn."
-    NOTE Currently the code would work, but raise a NotYourTurnError.
+    NOTE raise a NotYourTurnError and let message signify it is actually because you are not registered at this game.
     """
 
 
