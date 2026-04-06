@@ -26,12 +26,14 @@ client = TestClient(app)
 
 MOCK_FEN_STATE = "8/8/8/8/8/8/8/8 w KQq - 8 24"
 MOCK_ID = uuid4()
+MOCK_NAME = "my-game"
 URL_PREFIX = "api/v1"
 
 
 def create_mock_game_response() -> GameResponse:
     return GameResponse(
         game_id=MOCK_ID,
+        game_name=MOCK_NAME,
         players={"white": "player_white", "black": "player_black"},
         fen_state=MOCK_FEN_STATE,
         starting_state=MOCK_FEN_STATE,
@@ -44,6 +46,7 @@ def create_mock_game_response() -> GameResponse:
 def create_mock_legal_moves_response() -> LegalMovesResponse:
     return LegalMovesResponse(
         game_id=MOCK_ID,
+        game_name=MOCK_NAME,
         player_name="Mocker McMocker",
         color=Color.WHITE,
         legal_moves=["a1a2", "a2a3"],
@@ -75,6 +78,31 @@ def test_create_game() -> None:
 
     # response model should be a GameResponse
     GameResponse.model_validate(data)
+
+
+def test_create_game_with_name() -> None:
+    """Create a new game with an alias, so we do not need to remember the UUID."""
+    mock_service = Mock()
+    mock_service.create_new_game.return_value = create_mock_game_response()
+    app.dependency_overrides[get_chess_service] = lambda: mock_service
+
+    response = client.post(
+        f"{URL_PREFIX}/games",
+        json={
+            "player_name": "Mocker M. Mockerson",
+            "color": "white",
+            "starting_fen": MOCK_FEN_STATE,
+            "game_name": MOCK_NAME,
+        },
+    )
+
+    # successful
+    assert response.status_code == 200
+
+    # contract: At least should return a game ID and game name
+    data = response.json()
+    assert "game_id" in data
+    assert "game_name" in data
 
 
 def test_create_game_without_starting_fen() -> None:
@@ -143,7 +171,7 @@ def test_invalid_create_game_request() -> None:
     assert data["error"] == "InvalidRequestError"
 
 
-# --- POST /games/{game_id}/players ---
+# --- POST /games/{identifier}/players ---
 def test_join_game() -> None:
     mock_service = Mock()
     mock_service.join_game.return_value = create_mock_game_response()
@@ -158,7 +186,7 @@ def test_join_game() -> None:
     GameResponse.model_validate(data)
 
 
-# --- GET /games/{game_id} ---
+# --- GET /games/{identifier} ---
 def test_get_game_state() -> None:
     mock_service = Mock()
     mock_service.get_game_state.return_value = create_mock_game_response()
@@ -170,7 +198,18 @@ def test_get_game_state() -> None:
     GameResponse.model_validate(data)
 
 
-# --- GET /games/{game_id}/legal-moves ---
+def test_get_game_state_by_name() -> None:
+    mock_service = Mock()
+    mock_service.get_game_state.return_value = create_mock_game_response()
+    app.dependency_overrides[get_chess_service] = lambda: mock_service
+    response = client.get(f"{URL_PREFIX}/games/{MOCK_NAME}")
+    assert response.status_code == 200
+    data = response.json()
+    assert "fen_state" in data
+    GameResponse.model_validate(data)
+
+
+# --- GET /games/{identifier}/legal-moves ---
 def test_get_legal_moves() -> None:
     mock_service = Mock()
     mock_service.legal_moves.return_value = create_mock_legal_moves_response()
@@ -185,7 +224,7 @@ def test_get_legal_moves() -> None:
     LegalMovesResponse.model_validate(data)
 
 
-# --- POST /games/{game_id}/moves ---
+# --- POST /games/{identifier}/moves ---
 def test_make_move() -> None:
     mock_service = Mock()
     mock_service.make_move.return_value = create_mock_game_response()
@@ -217,7 +256,7 @@ def test_make_move_raises_illegal_move_error() -> None:
     assert data["error"] == "IllegalMoveError"
 
 
-# --- DELETE /games/{game_id} ---
+# --- DELETE /games/{identifier} ---
 def test_delete_game() -> None:
     mock_service = Mock()
     mock_service.delete_game.return_value = None
