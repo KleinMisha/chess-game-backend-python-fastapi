@@ -1,6 +1,7 @@
 """Orchestration of communication from API router to business logic and persistence layers (and the reverse direction)."""
 
 import logging
+from typing import Optional
 from uuid import UUID
 
 from src.api.v1.models import (
@@ -12,7 +13,7 @@ from src.api.v1.models import (
     MoveRequest,
 )
 from src.chess.game import Game, build_uci
-from src.core.exceptions import GameNotFoundError
+from src.core.exceptions import GameNotFoundError, NameNotUniqueError
 from src.core.models import GameModel
 from src.core.shared_types import Color
 from src.db.repository import GameRepository
@@ -27,6 +28,10 @@ class ChessService:
     # -- API routes logic ---
     def create_new_game(self, request: CreateGameRequest) -> GameResponse:
         """First player requested to create a new game."""
+        # If a name is supplied, check if this name is allowed. Otherwise, early exit
+        game_name = self._prepare_name(request.game_name)
+        if game_name and not self._is_unique(game_name):
+            raise NameNotUniqueError(f"Game with name: {game_name} already exists.")
 
         # Use info in CreateGameRequest to create a new Game, and convert into GameModel
         new_game = Game.new_game(
@@ -41,8 +46,10 @@ class ChessService:
         )
 
         # Store the GameModel in the repository
-        stored_model, game_id = self.repo.create_game(created_game_data)
+        stored_model, game_id = self.repo.create_game(created_game_data, name=game_name)
         logging.info(f"Created new game record with id: {game_id}")
+        if game_name:
+            logging.info(f"Game stored under name: {game_name} -> {game_id}")
 
         # Reconstruct game from stored GameModel (to compute winner, etc.)
         stored_game = Game.from_model(stored_model)
@@ -50,8 +57,10 @@ class ChessService:
         # Return a GameResponse
         return self._create_game_response(game_id, stored_game)
 
-    def join_game(self, game_id: UUID, request: JoinGameRequest) -> GameResponse:
+    def join_game(self, identifier: str, request: JoinGameRequest) -> GameResponse:
         """Second player requested to join a game."""
+        # Determine if game ID  or name is used in URL
+        game_id = self._get_uuid(identifier)
 
         # Retrieve persisted GameModel from repository
         stored_model = self._fetch_game(game_id)
@@ -76,12 +85,15 @@ class ChessService:
         # Return a GameResponse
         return self._create_game_response(game_id, game)
 
-    def get_game_state(self, game_id: UUID) -> GameResponse:
+    def get_game_state(self, identifier: str) -> GameResponse:
         """
         Retrieve current game state.
         ----
         Used in "polling" loop by frontend to check when it is the player's turn for instance.
         """
+        # Determine if game ID  or name is used in URL
+        game_id = self._get_uuid(identifier)
+
         # Retrieve persisted GameModel from repository
         game_model = self._fetch_game(game_id)
         logging.info(f"Retrieved game from repository with id: {game_id}")
@@ -90,9 +102,11 @@ class ChessService:
         return self._create_game_response(game_id, game)
 
     def legal_moves(
-        self, game_id: UUID, request: LegalMovesRequest
+        self, identifier: str, request: LegalMovesRequest
     ) -> LegalMovesResponse:
         """retrieve set of legal moves."""
+        # Determine if game ID  or name is used in URL
+        game_id = self._get_uuid(identifier)
 
         # Retrieve persisted GameModel from repository
         stored_model = self._fetch_game(game_id)
@@ -107,6 +121,7 @@ class ChessService:
 
         return LegalMovesResponse(
             game_id=game_id,
+            game_name=self.repo.get_name_by_id(game_id),
             player_name=request.player_name,
             color=next(
                 Color[c.name]
@@ -116,8 +131,10 @@ class ChessService:
             legal_moves=legal_moves,
         )
 
-    def make_move(self, game_id: UUID, request: MoveRequest) -> GameResponse:
+    def make_move(self, identifier: str, request: MoveRequest) -> GameResponse:
         """Make a move attempt."""
+        # Determine if game ID  or name is used in URL
+        game_id = self._get_uuid(identifier)
 
         # Retrieve persisted GameModel from repository
         stored_model = self._fetch_game(game_id)
@@ -155,8 +172,12 @@ class ChessService:
         """
         raise NotImplementedError
 
-    def delete_game(self, game_id: UUID) -> None:
+    def delete_game(self, identifier: str) -> None:
         """Handle a request to delete a Game record."""
+
+        # Determine if game ID  or name is used in URL
+        game_id = self._get_uuid(identifier)
+
         self.repo.delete_game(game_id)
         logging.info(f"Deleted record of game with id: {game_id}")
 
@@ -173,6 +194,7 @@ class ChessService:
         )
         return GameResponse(
             game_id=game_id,
+            game_name=self.repo.get_name_by_id(game_id),
             players=model.registered_players,
             fen_state=model.current_fen,
             starting_state=starting_fen,
@@ -188,3 +210,56 @@ class ChessService:
         if game_model is None:
             raise GameNotFoundError(f"Game with {id=} not found.")
         return game_model
+
+    def _prepare_name(self, name: Optional[str]) -> str | None:
+        """
+        Preprocesses the provided name argument.
+        ----
+        * If no name is supplied --> passthrough
+        * If empty string is provided --> return None
+        * If a name is provided ---> first normalize
+        """
+        if not name:
+            return None
+        normalized_name = self._normalize_name(name)
+        return normalized_name or None
+
+    def _normalize_name(self, name: str) -> str:
+        """
+        Normalize requested game name(s) to simplify storage / avoid edge cases in lookup.
+        ----
+        * converts to lower case
+        * removes trailing spaces (meaning the empty string will result in a null value in the repository)
+        * replaces spaces between words by dashes
+        * replaces underscores by dashes
+        """
+        return name.lower().strip().replace(" ", "-").replace("_", "-")
+
+    def _is_unique(self, name: str) -> bool:
+        return not self.repo.name_exists(name)
+
+    def _get_uuid(self, identifier: str) -> UUID:
+        """
+        Return the ID for the given identifier.
+        ----
+        If the entered identifier already is a UUID, returns input value.
+        If the entered identifier is a name (alias), uses the repository to find the corresponding UUID.
+        """
+        # Case 1: Used UUID in the URL
+        if self._is_uuid(identifier):
+            return UUID(identifier)
+
+        # Case 2: Used the name in the URL
+        game_id = self.repo.get_id_by_name(identifier)
+        if game_id is None:
+            raise GameNotFoundError(f"Game with {identifier=} not found.")
+
+        return game_id
+
+    def _is_uuid(self, identifier: str) -> bool:
+        """Checks if the given string can be interpreted as a UUID"""
+        try:
+            UUID(identifier)
+            return True
+        except ValueError:
+            return False
