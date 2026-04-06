@@ -77,6 +77,11 @@ class SQLGameRepository:
         query = select(DBGame.id).where(DBGame.name == name)
         return self.db.execute(query).scalar_one_or_none()
 
+    def get_name_by_id(self, game_id: UUID) -> str | None:
+        """Find the game name (if any) for the game with the given ID."""
+        query = select(DBGame.name).where(DBGame.id == game_id)
+        return self.db.execute(query).scalar_one_or_none()
+
     def _fetch_game(self, game_id: UUID) -> DBGame | None:
         query = select(DBGame).where(DBGame.id == game_id)
         return self.db.execute(query).scalar_one_or_none()

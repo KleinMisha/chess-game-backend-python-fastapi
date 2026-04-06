@@ -221,8 +221,6 @@ def test_attempt_deleting_unknown_game(db_session: Session) -> None:
 
 
 # --- ALLOW FOR GAME NAME ALIASES ----
-
-
 def test_create_game_with_name(db_session: Session) -> None:
     """Conversion from a GameModel to DBGame for a new entry to the database."""
     # Mock game data
@@ -295,3 +293,52 @@ def test_game_id_by_name_returns_none_if_absent(db_session: Session) -> None:
     repo = SQLGameRepository(db_session)
     found_id = repo.get_id_by_name(game_name)
     assert found_id is None
+
+
+def test_name_by_game_id(db_session: Session) -> None:
+    """Should return the expected game name."""
+    model = GameModel(
+        current_fen="FEN string",
+        history_fen=["FEN", "FEN", "FEN", "yep...FEN"],
+        moves_uci=["UCI", "x5y7", "mock"],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status=Status.IN_PROGRESS,
+    )
+
+    expected_name = "my-game"
+    repo = SQLGameRepository(db_session)
+    _, game_id = repo.create_game(model, name=expected_name)
+    found_name = repo.get_name_by_id(game_id)
+    assert found_name is not None
+    assert found_name == expected_name
+
+
+def test_name_by_game_id_returns_none_if_no_record(db_session: Session) -> None:
+    """
+    If return None if no record is found (can be used in other layers to raise exception).
+
+    NOTE: simply never create the game in the fist place ensures it does not exist in db.
+    """
+
+    repo = SQLGameRepository(db_session)
+    non_existing_id = uuid4()
+    found_name = repo.get_name_by_id(non_existing_id)
+    assert found_name is None
+
+
+def test_name_by_game_id_returns_none_if_name_absent(db_session: Session) -> None:
+    """
+    The game name is optional. Test that for an existing game (with a null-valued name), the retrieval returns None.
+    """
+    model = GameModel(
+        current_fen="FEN string",
+        history_fen=["FEN", "FEN", "FEN", "yep...FEN"],
+        moves_uci=["UCI", "x5y7", "mock"],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status=Status.IN_PROGRESS,
+    )
+
+    repo = SQLGameRepository(db_session)
+    _, game_id = repo.create_game(model)
+    found_name = repo.get_name_by_id(game_id)
+    assert found_name is None

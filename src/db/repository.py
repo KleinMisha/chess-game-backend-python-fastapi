@@ -34,3 +34,7 @@ class GameRepository(Protocol):
     def get_id_by_name(self, name: str) -> UUID | None:
         """Find the game ID with the given name (alias)."""
         ...
+
+    def get_name_by_id(self, game_id: UUID) -> str | None:
+        """Find the game name (if any) for the game with the given ID."""
+        ...
