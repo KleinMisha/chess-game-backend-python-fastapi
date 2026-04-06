@@ -1,7 +1,5 @@
 """Router for Game service."""
 
-from uuid import UUID
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -33,43 +31,43 @@ def create_new_game(
     return service.create_new_game(request)
 
 
-@router.post("/games/{game_id}/players", response_model=GameResponse)
+@router.post("/games/{identifier}/players", response_model=GameResponse)
 def join_game(
-    game_id: UUID,
+    identifier: str,
     request: JoinGameRequest,
     service: ChessService = Depends(get_chess_service),
 ) -> GameResponse:
-    return service.join_game(game_id, request)
+    return service.join_game(identifier, request)
 
 
-@router.get("/games/{game_id}", response_model=GameResponse)
+@router.get("/games/{identifier}", response_model=GameResponse)
 def get_game_state(
-    game_id: UUID, service: ChessService = Depends(get_chess_service)
+    identifier: str, service: ChessService = Depends(get_chess_service)
 ) -> GameResponse:
-    return service.get_game_state(game_id)
+    return service.get_game_state(identifier)
 
 
-@router.get("/games/{game_id}/legal-moves", response_model=LegalMovesResponse)
+@router.get("/games/{identifier}/legal-moves", response_model=LegalMovesResponse)
 def legal_moves(
-    game_id: UUID,
+    identifier: str,
     player_name: str,
     service: ChessService = Depends(get_chess_service),
 ) -> LegalMovesResponse:
     request = LegalMovesRequest(player_name=player_name)
-    return service.legal_moves(game_id, request)
+    return service.legal_moves(identifier, request)
 
 
-@router.post("/games/{game_id}/moves", response_model=GameResponse)
+@router.post("/games/{identifier}/moves", response_model=GameResponse)
 def make_move(
-    game_id: UUID,
+    identifier: str,
     request: MoveRequest,
     service: ChessService = Depends(get_chess_service),
 ) -> GameResponse:
-    return service.make_move(game_id, request)
+    return service.make_move(identifier, request)
 
 
-@router.delete("/games/{game_id}")
+@router.delete("/games/{identifier}")
 def delete_game(
-    game_id: UUID, service: ChessService = Depends(get_chess_service)
+    identifier: str, service: ChessService = Depends(get_chess_service)
 ) -> None:
-    return service.delete_game(game_id)
+    return service.delete_game(identifier)

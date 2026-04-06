@@ -16,6 +16,7 @@ PlayerName = str
 class CreateGameRequest(BaseModel):
     player_name: str
     color: Color
+    game_name: Optional[str] = None
     starting_fen: Optional[str] = None
 
     @field_validator("starting_fen")
@@ -69,6 +70,7 @@ class MoveRequest(BaseModel):
 # --- RESPONSE MODELS ---
 class GameResponse(BaseModel):
     game_id: UUID
+    game_name: Optional[str]
     players: dict[PieceColor, PlayerName]
     fen_state: str
     starting_state: str
@@ -79,6 +81,7 @@ class GameResponse(BaseModel):
 
 class LegalMovesResponse(BaseModel):
     game_id: UUID
+    game_name: Optional[str]
     player_name: str
     color: Color
     legal_moves: list[str]

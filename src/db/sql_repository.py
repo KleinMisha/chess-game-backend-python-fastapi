@@ -1,5 +1,6 @@
 """Implementation of (Game)Repository using SQLAlchemy"""
 
+from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -22,7 +23,9 @@ class SQLGameRepository:
             return self._to_model(game_db)
         return None
 
-    def create_game(self, game: GameModel) -> tuple[GameModel, UUID]:
+    def create_game(
+        self, game: GameModel, name: Optional[str] = None
+    ) -> tuple[GameModel, UUID]:
         """Store new game and return the stored data + newly created game ID."""
 
         new_id = uuid4()
@@ -33,6 +36,7 @@ class SQLGameRepository:
             moves_uci=game.moves_uci,
             registered_players=game.registered_players,
             status=game.status,
+            name=name,
         )
         self.db.add(game_db)
         self.db.commit()
@@ -63,9 +67,24 @@ class SQLGameRepository:
         self.db.commit()
         return game_model
 
+    def name_exists(self, name: str) -> bool:
+        """Check if there already is a record with the suggested alias."""
+        query = select(DBGame.id).where(DBGame.name == name)
+        return self.db.execute(query).scalar_one_or_none() is not None
+
+    def get_id_by_name(self, name: str) -> UUID | None:
+        """Find the game ID with the given name (alias)."""
+        query = select(DBGame.id).where(DBGame.name == name)
+        return self.db.execute(query).scalar_one_or_none()
+
+    def get_name_by_id(self, game_id: UUID) -> str | None:
+        """Find the game name (if any) for the game with the given ID."""
+        query = select(DBGame.name).where(DBGame.id == game_id)
+        return self.db.execute(query).scalar_one_or_none()
+
     def _fetch_game(self, game_id: UUID) -> DBGame | None:
         query = select(DBGame).where(DBGame.id == game_id)
-        return self.db.scalar(query)
+        return self.db.execute(query).scalar_one_or_none()
 
     def _to_model(self, game_db: DBGame) -> GameModel:
         """Convert SQLAlchemy model to data transfer model."""

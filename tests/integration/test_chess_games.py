@@ -272,16 +272,13 @@ def test_playing_five_turns(client: TestClient) -> None:
     3a. GET /games/{game_id}/legal-moves
     3b. POST /games/{game_id}/moves (select a legal move from the list)
     3c. GET /games/{game_id}
-    4. MATE one of the players ()
-    5. DELETE /games/{game_id}
+    4. DELETE /games/{game_id}
 
     Assertions:
     ------
     I. All steps succeed
     II. Game state updates as expected across different calls.
     III. Can no longer make a move after checkmate is reached.
-
-    #TODO --> Add the game's outcome / winner into the response. Or create a new endpoint for this.
     """
     #  Create a new game via POST /games.
     response = client.post(
@@ -348,8 +345,151 @@ def test_playing_five_turns(client: TestClient) -> None:
     assert retrieved_game_data["move_history"] == expected_moves
     assert retrieved_game_data["winner"] is None
 
+    # Remove record from repository via DELETE /games/{game_id}
+    response = client.delete(f"{config.api_prefix}/games/{game_id}")
+    assert response.status_code == 200
+
+
+def test_full_flow_by_game_name(client: TestClient) -> None:
+    """
+    1. Create a new game via POST /games and specify a game name.
+    2. POST /games/{game_name}/players
+    3a. GET /games/{game_name}/legal-moves
+    3b. POST /games/{game_name}/moves (select a legal move from the list)
+    3c. GET /games/{game_name}
+    4. DELETE /games/{game_name}
+    """
+    unique_number = (
+        uuid4()
+    )  # NOTE: not the same as the game_id, just to make names unique between tests.
+    #  Create a new game via POST /games.
+    response = client.post(
+        f"{config.api_prefix}/games",
+        json={
+            "player_name": "FirstPlayer",
+            "color": "white",
+            "game_name": f"Test game {unique_number}",
+        },
+    )
+    assert response.status_code == 200
+
+    data = response.json()
+    game_name = data["game_name"]
+
+    # check normalization happened
+    expected_name = f"test-game-{unique_number}"
+    assert game_name == expected_name
+
+    # Second player joins the game via POST /games/{game_name}/players
+    response = client.post(
+        f"{config.api_prefix}/games/{game_name}/players",
+        json={"player_name": "SecondPlayer"},
+    )
+    assert response.status_code == 200
+
+    # Play a couple of turns
+    expected_moves: list[str] = []
+    for _ in range(5):
+        for player in ["FirstPlayer", "SecondPlayer"]:
+            #  GET /games/{game_name}/legal-moves
+            response = client.get(
+                f"{config.api_prefix}/games/{game_name}/legal-moves",
+                params={"player_name": player},
+            )
+            assert response.status_code == 200
+
+            data = response.json()
+            legal_moves = data["legal_moves"]
+
+            # POST the first option of the legal moves
+            new_move = legal_moves[0]
+            sq_from, sq_to = new_move[:2], new_move[2:]
+            payload: dict[str, str] = {
+                "player_name": player,
+                "from_square": sq_from,
+                "to_square": sq_to,
+            }
+            response = client.post(
+                f"{config.api_prefix}/games/{game_name}/moves", json=payload
+            )
+            assert response.status_code == 200
+            expected_moves.append(new_move)
+
+    #  Retrieve the game via GET /games/{game_name}.
+    response = client.get(f"{config.api_prefix}/games/{game_name}")
+    retrieved_game_data = response.json()
+    assert response.status_code == 200
+    assert retrieved_game_data["game_name"] == game_name
+    assert retrieved_game_data["players"] == {
+        "white": "FirstPlayer",
+        "black": "SecondPlayer",
+    }
+    assert (
+        retrieved_game_data["fen_state"]
+        == "r1bqkbnr/pPpppppp/2n5/8/8/8/1PPPPPPP/RNBQKBNR w KQk - 1 6"
+    )
+    assert retrieved_game_data["starting_state"] == CANONICAL_STARTING_FEN
+    assert retrieved_game_data["move_history"] == expected_moves
+    assert retrieved_game_data["winner"] is None
+
+    # Remove record from repository via DELETE /games/{game_name}
+    response = client.delete(f"{config.api_prefix}/games/{game_name}")
+    assert response.status_code == 200
+
+
+def test_equivalence_game_name_and_uuid(client: TestClient) -> None:
+    """A GET request to /games/{game_id} should return the same as /games/{game_name}"""
+    game_name = f"test-game-{uuid4()}"
+    #  Create a new game via POST /games.
+    response = client.post(
+        f"{config.api_prefix}/games",
+        json={"player_name": "FirstPlayer", "color": "white", "game_name": game_name},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    game_id = data["game_id"]
+
+    # Second player joins the game
+    response = client.post(
+        f"{config.api_prefix}/games/{game_name}/players",
+        json={"player_name": "SecondPlayer"},
+    )
+    assert response.status_code == 200
+
+    # Fetch the game by id
+    response = client.get(f"{config.api_prefix}/games/{game_id}")
+    assert response.status_code == 200
+    by_id = response.json()
+
+    # Fetch the game by name
+    response = client.get(f"{config.api_prefix}/games/{game_name}")
+    assert response.status_code == 200
+    by_name = response.json()
+
+    # Test equivalence
+    assert by_id == by_name
+
 
 # --- ERROR PATHS INTEGRATION TESTS ---
+def test_create_game_duplicate_name_api(client: TestClient) -> None:
+    """Cannot create two games with the same name."""
+    # Create the first game
+    game_name = f"test-game-{uuid4()}"
+    #  Create a new game via POST /games.
+    response = client.post(
+        f"{config.api_prefix}/games",
+        json={"player_name": "FirstPlayer", "color": "white", "game_name": game_name},
+    )
+    assert response.status_code == 200
+
+    # Attempt to create another game with the same name
+    response = client.post(
+        f"{config.api_prefix}/games",
+        json={"player_name": "SecondPlayer", "color": "black", "game_name": game_name},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == "GameCreationError"
 
 
 def test_no_move_after_checkmate(client: TestClient) -> None:
