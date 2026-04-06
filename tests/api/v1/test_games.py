@@ -16,10 +16,7 @@ from src.core.exceptions import (
 )
 from src.core.shared_types import Color, Status
 from src.main import app
-from src.services.chess_service import (
-    GameResponse,
-    LegalMovesResponse,
-)
+from src.services.chess_service import GameIdentifiers, GameResponse, LegalMovesResponse
 
 client = TestClient(app)
 
@@ -169,6 +166,19 @@ def test_invalid_create_game_request() -> None:
     assert response.status_code == 400
     data = response.json()
     assert data["error"] == "InvalidRequestError"
+
+
+# --- GET /games/identifiers ---
+def test_get_game_identifiers() -> None:
+    """Fetch registered set of identifier (pairs)."""
+    mock_service = Mock()
+    mock_service.get_all_name_id_pairs.return_value = [
+        GameIdentifiers(name="first-name", uuid=uuid4()),
+        GameIdentifiers(name=None, uuid=uuid4()),
+    ]
+    app.dependency_overrides[get_chess_service] = lambda: mock_service
+    response = client.get(f"{URL_PREFIX}/games/identifiers/")
+    assert response.status_code == 200
 
 
 # --- POST /games/{identifier}/players ---

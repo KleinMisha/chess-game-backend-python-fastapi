@@ -6,6 +6,7 @@ from uuid import UUID
 
 from src.api.v1.models import (
     CreateGameRequest,
+    GameIdentifiers,
     GameResponse,
     JoinGameRequest,
     LegalMovesRequest,
@@ -180,6 +181,14 @@ class ChessService:
 
         self.repo.delete_game(game_id)
         logging.info(f"Deleted record of game with id: {game_id}")
+
+    def get_all_name_id_pairs(self) -> list[GameIdentifiers]:
+        """Handle a request to return all pairs of names and UUIDs known in the repository."""
+        logging.info("Request to see all name <-> uuid pairs.")
+        return [
+            GameIdentifiers(name=name, uuid=uuid)
+            for name, uuid in self.repo.get_all_name_id_pairs()
+        ]
 
     # -- Internal helpers --
     def _create_game_response(self, game_id: UUID, game: Game) -> GameResponse:
