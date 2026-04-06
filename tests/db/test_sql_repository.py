@@ -342,3 +342,26 @@ def test_name_by_game_id_returns_none_if_name_absent(db_session: Session) -> Non
     _, game_id = repo.create_game(model)
     found_name = repo.get_name_by_id(game_id)
     assert found_name is None
+
+
+def test_get_all_names_with_ids(db_session: Session) -> None:
+    """GET to /games/names should return all the available pairs of names and corresponding UUIDs"""
+    model = GameModel(
+        current_fen="FEN string",
+        history_fen=["FEN", "FEN", "FEN", "yep...FEN"],
+        moves_uci=["UCI", "x5y7", "mock"],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status=Status.IN_PROGRESS,
+    )
+
+    repo = SQLGameRepository(db_session)
+    _, first_id = repo.create_game(model, name="first-game")
+    _, second_id = repo.create_game(model, name="second-game")
+    _, third_id = repo.create_game(model)
+
+    name_id_pairs = repo.get_all_names()
+    assert set(name_id_pairs) == {
+        ("first-game", first_id),
+        ("second-game", second_id),
+        (None, third_id),
+    }
