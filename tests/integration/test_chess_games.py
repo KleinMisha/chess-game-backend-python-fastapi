@@ -1,7 +1,7 @@
 """Integration tests: Chess games"""
 
 from typing import Generator
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -470,7 +470,48 @@ def test_equivalence_game_name_and_uuid(client: TestClient) -> None:
     assert by_id == by_name
 
 
-# --- ERROR PATHS INTEGRATION TESTS ---
+def test_get_all_game_identifiers(client: TestClient) -> None:
+    """GET to /games/identifiers"""
+    # Create two games with names
+    first_name = f"test-game-{uuid4()}"
+    second_name = f"test-game-{uuid4()}"
+    response = client.post(
+        f"{config.api_prefix}/games",
+        json={"player_name": "FirstPlayer", "color": "white", "game_name": first_name},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    first_id = data["game_id"]
+
+    response = client.post(
+        f"{config.api_prefix}/games",
+        json={"player_name": "FirstPlayer", "color": "white", "game_name": second_name},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    second_id = data["game_id"]
+
+    # Create a game without a name
+    response = client.post(
+        f"{config.api_prefix}/games",
+        json={"player_name": "FirstPlayer", "color": "white"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    third_id = data["game_id"]
+
+    # Get the game identifiers
+    response = client.get(f"{config.api_prefix}/games/identifiers")
+    data = response.json()
+    retrieved_identifier_pairs = [(item["name"], item["uuid"]) for item in data]
+    expected_identifier_pairs: list[tuple[str | None, UUID]] = [
+        (first_name, first_id),
+        (second_name, second_id),
+        (None, third_id),
+    ]
+    assert all(pair in retrieved_identifier_pairs for pair in expected_identifier_pairs)
+
+
 def test_create_game_duplicate_name_api(client: TestClient) -> None:
     """Cannot create two games with the same name."""
     # Create the first game
