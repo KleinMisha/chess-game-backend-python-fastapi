@@ -85,3 +85,10 @@ class LegalMovesResponse(BaseModel):
     player_name: str
     color: Color
     legal_moves: list[str]
+
+
+class GameNameID(BaseModel):
+    """To list all registered game names"""
+
+    name: Optional[str]
+    uuid: UUID
