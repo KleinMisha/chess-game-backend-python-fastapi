@@ -359,7 +359,7 @@ def test_get_all_names_with_ids(db_session: Session) -> None:
     _, second_id = repo.create_game(model, name="second-game")
     _, third_id = repo.create_game(model)
 
-    name_id_pairs = repo.get_all_names()
+    name_id_pairs = repo.get_all_name_id_pairs()
     assert set(name_id_pairs) == {
         ("first-game", first_id),
         ("second-game", second_id),

@@ -39,6 +39,6 @@ class GameRepository(Protocol):
         """Find the game name (if any) for the game with the given ID."""
         ...
 
-    def get_all_names(self) -> list[tuple[str | None, UUID]]:
+    def get_all_name_id_pairs(self) -> list[tuple[str | None, UUID]]:
         """Returns all registered game name / game id pairs."""
         ...

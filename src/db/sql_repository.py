@@ -82,7 +82,7 @@ class SQLGameRepository:
         query = select(DBGame.name).where(DBGame.id == game_id)
         return self.db.execute(query).scalar_one_or_none()
 
-    def get_all_names(self) -> list[tuple[str | None, UUID]]:
+    def get_all_name_id_pairs(self) -> list[tuple[str | None, UUID]]:
         """Returns all registered game name / game id pairs."""
         query = select(DBGame.name, DBGame.id)
         return [(name, uuid) for name, uuid in self.db.execute(query).all()]
