@@ -87,7 +87,7 @@ class LegalMovesResponse(BaseModel):
     legal_moves: list[str]
 
 
-class GameNameID(BaseModel):
+class GameIdentifiers(BaseModel):
     """To list all registered game names"""
 
     name: Optional[str]

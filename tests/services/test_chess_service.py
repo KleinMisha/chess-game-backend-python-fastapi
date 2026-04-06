@@ -11,7 +11,7 @@ from src.core.shared_types import Color, Status
 from src.services.chess_service import (
     ChessService,
     CreateGameRequest,
-    GameNameID,
+    GameIdentifiers,
     GameResponse,
     JoinGameRequest,
     LegalMovesRequest,
@@ -805,10 +805,10 @@ def test_get_all_name_id_pairs(mock_repository: MockRepository) -> None:
         ("second-game", second_id),
         (None, third_id),
     ]
-    expected_models: list[GameNameID] = [
-        GameNameID(name=name, uuid=uuid) for (name, uuid) in expected_pairs
+    expected_models: list[GameIdentifiers] = [
+        GameIdentifiers(name=name, uuid=uuid) for (name, uuid) in expected_pairs
     ]
-    assert all([isinstance(g, GameNameID) for g in game_name_id_pairs])
+    assert all([isinstance(g, GameIdentifiers) for g in game_name_id_pairs])
     assert set([(g.name, g.uuid) for g in game_name_id_pairs]) == set(
         [(e.name, e.uuid) for e in expected_models]
     )

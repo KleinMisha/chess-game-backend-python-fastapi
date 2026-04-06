@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from src.api.v1.models import (
     CreateGameRequest,
-    GameNameID,
+    GameIdentifiers,
     GameResponse,
     JoinGameRequest,
     LegalMovesRequest,
@@ -35,7 +35,7 @@ def create_new_game(
 @router.get("/games/identifiers")
 def get_game_name_id_pairs(
     service: ChessService = Depends(get_chess_service),
-) -> list[GameNameID]:
+) -> list[GameIdentifiers]:
     return service.get_all_name_id_pairs()
 
 

@@ -16,7 +16,7 @@ from src.core.exceptions import (
 )
 from src.core.shared_types import Color, Status
 from src.main import app
-from src.services.chess_service import GameNameID, GameResponse, LegalMovesResponse
+from src.services.chess_service import GameIdentifiers, GameResponse, LegalMovesResponse
 
 client = TestClient(app)
 
@@ -173,8 +173,8 @@ def test_get_game_identifiers() -> None:
     """Fetch registered set of identifier (pairs)."""
     mock_service = Mock()
     mock_service.get_all_name_id_pairs.return_value = [
-        GameNameID(name="first-name", uuid=uuid4()),
-        GameNameID(name=None, uuid=uuid4()),
+        GameIdentifiers(name="first-name", uuid=uuid4()),
+        GameIdentifiers(name=None, uuid=uuid4()),
     ]
     app.dependency_overrides[get_chess_service] = lambda: mock_service
     response = client.get(f"{URL_PREFIX}/games/identifiers/")
