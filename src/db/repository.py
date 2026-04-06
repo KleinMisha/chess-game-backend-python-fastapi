@@ -1,6 +1,6 @@
 """Protocol repository (can implement later for SQL Alchemy / simple Excel table etc.)"""
 
-from typing import Protocol
+from typing import Optional, Protocol
 from uuid import UUID
 
 from src.core.models import GameModel
@@ -9,7 +9,9 @@ from src.core.models import GameModel
 class GameRepository(Protocol):
     """Persistence layer orchestration"""
 
-    def create_game(self, game: GameModel) -> tuple[GameModel, UUID]:
+    def create_game(
+        self, game: GameModel, name: Optional[str] = None
+    ) -> tuple[GameModel, UUID]:
         """Store new game and return the stored data + newly created game ID."""
         ...
 
