@@ -384,9 +384,9 @@ def test_get_all_games_returns_game_models(db_session: Session) -> None:
     _, third_id = repo.create_game(model)
 
     games = repo.get_all_games()
-    expected_result: list[tuple[UUID, str | None, GameModel]] = [
-        (first_id, "first-game", model),
-        (second_id, "second-game", model),
-        (third_id, None, model),
+    expected_result: list[tuple[UUID, GameModel]] = [
+        (first_id, model),
+        (second_id, model),
+        (third_id, model),
     ]
     assert all(entry in games for entry in expected_result)

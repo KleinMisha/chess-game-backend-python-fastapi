@@ -43,6 +43,6 @@ class GameRepository(Protocol):
         """Returns all registered game name / game id pairs."""
         ...
 
-    def get_all_games(self) -> list[tuple[UUID, str | None, GameModel]]:
+    def get_all_games(self) -> list[tuple[UUID, GameModel]]:
         "Returns all the games stored in the repository."
         ...
