@@ -368,7 +368,7 @@ def test_get_all_names_with_ids(db_session: Session) -> None:
 
 
 def test_get_all_games_returns_game_models(db_session: Session) -> None:
-    """GET to /games should return all the identifier pairs + corresponding game state data."""
+    """Return all the identifier pairs + corresponding game state data."""
 
     model = GameModel(
         current_fen="FEN string",
@@ -383,10 +383,17 @@ def test_get_all_games_returns_game_models(db_session: Session) -> None:
     _, second_id = repo.create_game(model, name="second-game")
     _, third_id = repo.create_game(model)
 
-    games = repo.get_all_games()
+    games_data = repo.get_all_games()
     expected_result: list[tuple[UUID, GameModel]] = [
         (first_id, model),
         (second_id, model),
         (third_id, model),
     ]
-    assert all(entry in games for entry in expected_result)
+    assert all(entry in games_data for entry in expected_result)
+
+
+def test_get_all_games_empty_db_returns_empty_list(db_session: Session) -> None:
+    """Check that calling with no stored games results in an empty list."""
+    repo = SQLGameRepository(db_session)
+    games_data = repo.get_all_games()
+    assert games_data == []
