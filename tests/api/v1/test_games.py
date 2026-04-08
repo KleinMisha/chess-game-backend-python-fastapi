@@ -50,6 +50,20 @@ def create_mock_legal_moves_response() -> LegalMovesResponse:
     )
 
 
+# --- GET /games ---
+def test_get_all_games() -> None:
+    """Response of a GET request to /games should return a list of GameResponse models."""
+    mock_service = Mock()
+    mock_service.get_all_games.return_value = [create_mock_game_response()]
+    app.dependency_overrides[get_chess_service] = lambda: mock_service
+
+    response = client.get(f"{URL_PREFIX}/games")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+    for item in response.json():
+        GameResponse.model_validate(item)
+
+
 # --- POST /games ---
 def test_create_game() -> None:
 
