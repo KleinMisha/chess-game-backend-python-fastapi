@@ -165,14 +165,6 @@ class ChessService:
         # Return a GameResponse
         return self._create_game_response(game_id, game)
 
-    def list_games(self) -> None:
-        """Show all recorded games.
-
-        ---
-        # TODO If needed, should implement a corresponding method on the Repository side.
-        """
-        raise NotImplementedError
-
     def delete_game(self, identifier: str) -> None:
         """Handle a request to delete a Game record."""
 
@@ -188,6 +180,14 @@ class ChessService:
         return [
             GameIdentifiers(name=name, uuid=uuid)
             for name, uuid in self.repo.get_all_name_id_pairs()
+        ]
+
+    def get_all_games(self) -> list[GameResponse]:
+        """Handle request to list all stored games."""
+        games_info = self.repo.get_all_games()
+        return [
+            self._create_game_response(game_id=uuid, game=Game.from_model(model))
+            for uuid, model in games_info
         ]
 
     # -- Internal helpers --

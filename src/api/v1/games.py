@@ -25,6 +25,13 @@ def get_chess_service(db: Session = Depends(get_db)) -> ChessService:
     return ChessService(repository)
 
 
+@router.get("/games", response_model=list[GameResponse])
+def get_all_games(
+    service: ChessService = Depends(get_chess_service),
+) -> list[GameResponse]:
+    return service.get_all_games()
+
+
 @router.post("/games", response_model=GameResponse)
 def create_new_game(
     request: CreateGameRequest, service: ChessService = Depends(get_chess_service)

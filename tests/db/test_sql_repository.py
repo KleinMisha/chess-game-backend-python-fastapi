@@ -365,3 +365,35 @@ def test_get_all_names_with_ids(db_session: Session) -> None:
         ("second-game", second_id),
         (None, third_id),
     }
+
+
+def test_get_all_games_returns_game_models(db_session: Session) -> None:
+    """Return all the identifier pairs + corresponding game state data."""
+
+    model = GameModel(
+        current_fen="FEN string",
+        history_fen=["FEN", "FEN", "FEN", "yep...FEN"],
+        moves_uci=["UCI", "x5y7", "mock"],
+        registered_players={"white": "player_white", "black": "player_black"},
+        status=Status.IN_PROGRESS,
+    )
+
+    repo = SQLGameRepository(db_session)
+    _, first_id = repo.create_game(model, name="first-game")
+    _, second_id = repo.create_game(model, name="second-game")
+    _, third_id = repo.create_game(model)
+
+    games_data = repo.get_all_games()
+    expected_result: list[tuple[UUID, GameModel]] = [
+        (first_id, model),
+        (second_id, model),
+        (third_id, model),
+    ]
+    assert all(entry in games_data for entry in expected_result)
+
+
+def test_get_all_games_empty_db_returns_empty_list(db_session: Session) -> None:
+    """Check that calling with no stored games results in an empty list."""
+    repo = SQLGameRepository(db_session)
+    games_data = repo.get_all_games()
+    assert games_data == []

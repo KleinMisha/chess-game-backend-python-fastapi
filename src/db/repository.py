@@ -19,6 +19,10 @@ class GameRepository(Protocol):
         """Get game by ID, if record exists."""
         ...
 
+    def get_all_games(self) -> list[tuple[UUID, GameModel]]:
+        "Returns all the games stored in the repository."
+        ...
+
     def update_game(self, game_id: UUID, game: GameModel) -> GameModel | None:
         """Add new info to existing record."""
         ...

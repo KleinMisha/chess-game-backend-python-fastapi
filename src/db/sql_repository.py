@@ -23,6 +23,14 @@ class SQLGameRepository:
             return self._to_model(game_db)
         return None
 
+    def get_all_games(self) -> list[tuple[UUID, GameModel]]:
+        "Returns all the games stored in the repository."
+        query = select(DBGame)
+        return [
+            (game.id, self._to_model(game))
+            for game in self.db.execute(query).scalars().all()
+        ]
+
     def create_game(
         self, game: GameModel, name: Optional[str] = None
     ) -> tuple[GameModel, UUID]:
