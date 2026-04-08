@@ -1,6 +1,6 @@
 """Integration tests: Chess games"""
 
-from typing import Generator
+from typing import Any, Generator
 from uuid import UUID, uuid4
 
 import pytest
@@ -41,7 +41,7 @@ MOCK_ID = uuid4()
         (f, n)
         for f, n in zip(
             [None, "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1"],
-            [None, "named-game"],
+            [None, f"test-game-{uuid4()}"],
         )
     ],
 )
@@ -49,8 +49,7 @@ def test_create_and_retrieve_game(
     starting_fen: str | None, game_name: str | None, client: TestClient
 ) -> None:
     """
-    Create a new game, then
-
+    Create a new  (un)named game with(out) a custom starting FEN, then perform GET request to retrieve that data.
     """
     #  Create a new game via POST /games.
     response = client.post(
@@ -78,6 +77,39 @@ def test_create_and_retrieve_game(
         if starting_fen is not None
         else CANONICAL_STARTING_FEN
     )
+    assert retrieved_game_data["game_name"] == game_name
+
+
+def test_get_all_games(client: TestClient) -> None:
+    """
+    Test the GET /games endpoint
+    ----
+    Create a couple (un)named games with(out) a custom starting FEN, then retrieve the entire list.
+    """
+
+    # Create the games:
+    starting_fens: list[str | None] = [
+        None,
+        "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1",
+    ]
+    game_names: list[str | None] = [None, "named-game"]
+
+    for fen, name in zip(starting_fens, game_names):
+        client.post(
+            f"{config.api_prefix}/games",
+            json={
+                "player_name": "FirstPlayer",
+                "color": "white",
+                "starting_fen": fen,
+                "game_name": name,
+            },
+        )
+
+    # GET request
+    response = client.get(f"{config.api_prefix}/games")
+    assert response.status_code == 200
+    data: list[Any] = response.json()
+    assert isinstance(data, list)
 
 
 def test_join_game(client: TestClient) -> None:
