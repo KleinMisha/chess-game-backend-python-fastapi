@@ -87,6 +87,14 @@ class SQLGameRepository:
         query = select(DBGame.name, DBGame.id)
         return [(name, uuid) for name, uuid in self.db.execute(query).all()]
 
+    def get_all_games(self) -> list[tuple[UUID, str | None, GameModel]]:
+        "Returns all the games stored in the repository."
+        query = select(DBGame)
+        return [
+            (game.id, game.name, self._to_model(game))
+            for game in self.db.execute(query).scalars().all()
+        ]
+
     def _fetch_game(self, game_id: UUID) -> DBGame | None:
         query = select(DBGame).where(DBGame.id == game_id)
         return self.db.execute(query).scalar_one_or_none()
