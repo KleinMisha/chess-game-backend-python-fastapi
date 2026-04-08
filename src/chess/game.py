@@ -6,13 +6,11 @@ passes this information to the service layer, which can then pass it onwards to 
 
 from copy import deepcopy
 from dataclasses import dataclass
-from enum import Enum, auto
 from typing import Optional, Self
 
 from src.chess.board import Board
 from src.chess.castling import CASTLING_RULES, CastlingDirection
 from src.chess.fen import FENState
-from src.chess.game_model import GameModel
 from src.chess.moves import (
     AcceptedMove,
     Move,
@@ -26,20 +24,26 @@ from src.chess.moves import (
 from src.chess.pieces import AVAILABLE_COLOR_NAMES, Color, Piece, PieceType
 from src.chess.square import Square
 from src.core.exceptions import (
+    GameCreationError,
     GameStateError,
     IllegalMoveError,
     NotYourTurnError,
 )
+from src.core.models import GameModel
+from src.core.shared_types import Status
 
 
-class Status(Enum):
-    WAITING_FOR_PLAYERS = auto()
-    IN_PROGRESS = auto()
-    CHECKMATE = auto()
-    STALEMATE = auto()
-    DRAW_REPETITION = auto()
-    DRAW_FIFTY_HALF_MOVE_RULE = auto()
-    ABORTED = auto()
+# Helper method called by Service
+def build_uci(
+    from_square_alg: str,
+    to_square_alg: str,
+    promotion: Optional[str] = None,
+) -> str:
+    """Create a UCI string from source/target squares. (via Move.to_uci())"""
+    from_square = Square.from_algebraic(from_square_alg)
+    to_square = Square.from_algebraic(to_square_alg)
+    promote_to_piece = PieceType[promotion.upper()] if promotion is not None else None
+    return Move(from_square, to_square, promote_to=promote_to_piece).to_uci()
 
 
 @dataclass
@@ -60,9 +64,14 @@ class Game:
         # Validation
         status_name = model.status.replace(" ", "_").upper()
         if status_name not in Status.__members__:
-            raise GameStateError(
-                f"Invalid status code: {model.status!r}. \nPick one from {','.join([status.name.lower() for status in Status])}"
+            raise GameCreationError(
+                f"Unknown status code: {model.status!r}. \nPick one from {','.join([status.name.lower() for status in Status])}"
             )
+        for color_name in model.registered_players.keys():
+            if color_name.upper() not in AVAILABLE_COLOR_NAMES:
+                raise GameCreationError(
+                    f"Color {color_name} not in {','.join([c.lower() for c in AVAILABLE_COLOR_NAMES])}."
+                )
 
         # create the Game
         board = Board.from_fen(model.current_fen.split(" ")[0])
@@ -86,10 +95,11 @@ class Game:
             history_fen=self.history,
             moves_uci=[move.to_uci() for move in self.moves],
             registered_players={
-                "white": self.players[Color.WHITE],
-                "black": self.players[Color.BLACK],
+                color.name.lower(): self.players[color]
+                for color in [Color.WHITE, Color.BLACK]
+                if color in self.players.keys()
             },
-            status=self.status.name.lower(),
+            status=self.status,
         )
 
     @classmethod
@@ -105,8 +115,8 @@ class Game:
         )
         board = Board.from_fen(state.position)
         if color.upper() not in AVAILABLE_COLOR_NAMES:
-            raise GameStateError(
-                f"Cannot create new game. Color {color} not in {','.join([c.lower() for c in AVAILABLE_COLOR_NAMES])}."
+            raise GameCreationError(
+                f"Color {color} not in {','.join([c.lower() for c in AVAILABLE_COLOR_NAMES])}."
             )
         player_color = Color[color.upper()]
         return cls(

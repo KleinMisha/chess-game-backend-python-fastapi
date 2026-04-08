@@ -1,0 +1,28 @@
+services:
+  app:
+    build: .
+    volumes:
+      - "sqllite-db:/app/data"
+      - "logs:/app/logs"
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL}
+      - APP_PORT=${APP_PORT}
+    ports:
+      - "${APP_PORT}:8000"
+    command:
+      [
+        "uvicorn",
+        "src.main:app",
+        "--log-level",
+        "${LOG_LEVEL}",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "${APP_PORT}",
+        "--reload",
+      ]
+
+# Tell Docker to maintain files within the container, but let them persist across startup/teardown of container instances.
+volumes:
+  sqllite-db:
+  logs:

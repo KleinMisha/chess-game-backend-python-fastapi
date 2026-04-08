@@ -28,7 +28,9 @@
     ],
     // Spell checker settings
     "cSpell.language": "en-US",
-    "cSpell.ignoreWords": [],
+    "cSpell.ignoreWords": [
+        "sessionmaker"
+    ],
     "cSpell.words": [],
 
 

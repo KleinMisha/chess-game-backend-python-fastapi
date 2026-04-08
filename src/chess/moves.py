@@ -170,6 +170,64 @@ def single_step_move(square: Square, board: Board, deltas: list[Vector]) -> list
     return moves
 
 
+def candidate_pawn_pushes(square: Square, board: Board) -> list[Move]:
+    """Handle pawn pushes separately
+
+    1. Move by single square --> ONLY if square is empty (pawns do NOT capture by making regular move / which is assumed in the single_step_move()/raycasting_move() which is valid for all other piece types.)
+    2. Can move by two from starting square --> ONLY if both squares in front of it are empty.
+    """
+    pawn_pushes: list[Move] = []
+
+    # White moves up the board, black moves down the board
+    pawn_color = board.piece(square).color
+    direction = 1 if pawn_color == Color.WHITE else -1
+
+    # Regular pawn pushes: Target square must be empty
+    one_rank_away = Square(file=square.file, rank=square.rank + direction)
+    if one_rank_away.is_within_bounds() and (one_rank_away in board.empty_squares()):
+        pawn_pushes.append(Move(from_square=square, to_square=one_rank_away))
+
+    # When on starting square: A pawn can move by two if both squares in front of it are empty
+    pawn_starting_ranks: dict[Color, int] = {Color.WHITE: 2, Color.BLACK: 7}
+    two_ranks_away = Square(file=square.file, rank=square.rank + 2 * direction)
+    if (
+        square.rank == pawn_starting_ranks[pawn_color]
+        and two_ranks_away.is_within_bounds()
+        and (one_rank_away in board.empty_squares())
+        and (two_ranks_away in board.empty_squares())
+    ):
+        pawn_pushes.append(Move(from_square=square, to_square=two_ranks_away))
+
+    return pawn_pushes
+
+
+def candidate_pawn_captures(square: Square, board: Board) -> list[Move]:
+    """
+    Pawns take diagonally
+
+    En Passant is handled separately.
+    """
+    pawn_takes: list[Move] = []
+    pawn = board.piece(square)
+    pawn_color = pawn.color
+    take_directions: list[Vector] = (
+        [(1, 1), (-1, 1)] if pawn_color == Color.WHITE else [(1, -1), (-1, -1)]
+    )
+    for df, dr in take_directions:
+        new_file = square.file + df
+        new_rank = square.rank + dr
+        target_square = Square(new_file, new_rank)
+        opponent_color = Color.WHITE if pawn_color == Color.BLACK else Color.BLACK
+        if not target_square.is_within_bounds():
+            continue
+        piece_on_target = board.piece(target_square)
+        is_opponent_piece = piece_on_target.color == opponent_color
+        not_a_king = board.piece(target_square).type != PieceType.KING
+        if is_opponent_piece and not_a_king:
+            pawn_takes.append(Move(from_square=square, to_square=target_square))
+    return pawn_takes
+
+
 def candidate_pawn_moves(square: Square, board: Board) -> list[Move]:
     """
     A pawn:
@@ -180,40 +238,11 @@ def candidate_pawn_moves(square: Square, board: Board) -> list[Move]:
     NOTE: En passant will be taken care of in the Game class
     """
     moves: list[Move] = []
-    # Pawn pushes : Black moves down the board, White moves up the board
-    pawn_push: list[Vector] = (
-        [(0, 1)] if board.piece(square).color == Color.WHITE else [(0, -1)]
-    )
-    moves.extend(single_step_move(square, board, pawn_push))
+    # Pawn pushes :
+    moves.extend(candidate_pawn_pushes(square, board))
 
-    # pawn pushes from starting square: They can move by two in the first move
-    pawn_starting_ranks: dict[Color, int] = {Color.WHITE: 2, Color.BLACK: 7}
-    double_pawn_push: list[Vector] = (
-        [(0, 2)] if board.piece(square).color == Color.WHITE else [(0, -2)]
-    )
-    pawn_color = board.piece(square).color
-    if square.rank == pawn_starting_ranks[pawn_color]:
-        moves.extend(single_step_move(square, board, double_pawn_push))
-
-    # pawns take diagonally:
-    pawn_takes: list[Vector] = (
-        [(1, 1), (-1, 1)]
-        if board.piece(square).color == Color.WHITE
-        else [(1, -1), (-1, -1)]
-    )
-    for df, dr in pawn_takes:
-        new_file = square.file + df
-        new_rank = square.rank + dr
-        target_square = Square(new_file, new_rank)
-        player_color = board.piece(square).color
-        opponent_color = Color.WHITE if player_color == Color.BLACK else Color.BLACK
-        if not target_square.is_within_bounds():
-            continue
-
-        opponent_piece = board.piece(target_square).color == opponent_color
-        not_a_king = board.piece(target_square).type != PieceType.KING
-        if opponent_piece and not_a_king:
-            moves.append(Move(from_square=square, to_square=target_square))
+    # Pawn captures:
+    moves.extend(candidate_pawn_captures(square, board))
 
     return moves
 
@@ -485,8 +514,6 @@ def squares_between_on_rank(from_square: Square, to_square: Square) -> list[Squa
     """
 
     if from_square.rank != to_square.rank:
-        # todo  check if worth making this a custom error. It is right in between
-        # todo "expected error by invalid input" and "incorrect programming / should never happen if backend is done well"
         raise ValueError(
             f"squares_between_on_rank requires both squares to lie on the same rank. \n from: {from_square}\n to:{to_square}"
         )
