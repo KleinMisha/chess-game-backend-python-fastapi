@@ -36,10 +36,18 @@ MOCK_ID = uuid4()
 
 # --- HAPPY PATHS INTEGRATION TESTS ---
 @pytest.mark.parametrize(
-    "starting_fen",
-    [None, "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1"],
+    "starting_fen, game_name",
+    [
+        (f, n)
+        for f, n in zip(
+            [None, "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 1"],
+            [None, "named-game"],
+        )
+    ],
 )
-def test_create_and_retrieve_game(starting_fen: str | None, client: TestClient) -> None:
+def test_create_and_retrieve_game(
+    starting_fen: str | None, game_name: str | None, client: TestClient
+) -> None:
     """
     Create a new game, then
 
@@ -51,6 +59,7 @@ def test_create_and_retrieve_game(starting_fen: str | None, client: TestClient) 
             "player_name": "FirstPlayer",
             "color": "white",
             "starting_fen": starting_fen,
+            "game_name": game_name,
         },
     )
     data = response.json()
