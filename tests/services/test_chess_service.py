@@ -45,6 +45,10 @@ class MockRepository:
         """Get game by ID, if record exists."""
         return self._games.get(game_id)
 
+    def get_all_games(self) -> list[tuple[UUID, GameModel]]:
+        "Returns all the games stored in the repository."
+        return [(uuid, model) for uuid, model in self._games.items()]
+
     def update_game(self, game_id: UUID, game: GameModel) -> GameModel | None:
         """Add new info to existing record."""
         if game_id not in self._games:
@@ -449,6 +453,44 @@ def test_attempt_to_find_unknown_game_name(mock_repository: MockRepository) -> N
     _ = service.create_new_game(create_request)
     with pytest.raises(BaseError):
         _ = service.get_game_state(wrong_name)
+
+
+# --- SERVICE - GET ALL GAMES ---
+def test_get_all_games(mock_repository: MockRepository) -> None:
+    """Fetch all stored games"""
+    player_name = "Mocker M. Mockerson"
+    game_1 = CreateGameRequest(
+        player_name=player_name,
+        color=Color.WHITE,
+        starting_fen=MOCK_FEN_STATE,
+        game_name="game_1",
+    )
+    game_2 = CreateGameRequest(
+        player_name=player_name,
+        color=Color.WHITE,
+        starting_fen=MOCK_FEN_STATE,
+        game_name="game_2",
+    )
+    game_3 = CreateGameRequest(
+        player_name=player_name,
+        color=Color.WHITE,
+        starting_fen=MOCK_FEN_STATE,
+        game_name="game_3",
+    )
+    service = ChessService(mock_repository)
+    service.create_new_game(game_1)
+    service.create_new_game(game_2)
+    service.create_new_game(game_3)
+    response = service.get_all_games()
+    assert isinstance(response, list)
+    assert all(isinstance(r, GameResponse) for r in response)
+
+
+def test_get_all_games_empty(mock_repository: MockRepository) -> None:
+    """Test that empty IN -> empty OUT"""
+    service = ChessService(mock_repository)
+    response = service.get_all_games()
+    assert response == []
 
 
 # --- SERVICE - LEGAL MOVES ----
