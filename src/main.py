@@ -17,7 +17,8 @@ from src.core.exceptions import (
     NotYourTurnError,
 )
 from src.core.logging import setup_logging
-from src.db.database import Base, engine
+from src.db.database import get_engine
+from src.db.schema import Base
 
 
 def create_exception_handler(
@@ -41,7 +42,7 @@ def create_exception_handler(
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=get_engine())
     yield
 
 
