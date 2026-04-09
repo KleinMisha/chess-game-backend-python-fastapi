@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from src.api.v1.games import get_chess_service
+from src.api.v1.games import get_chess_service, get_db
 from src.core.config import config
 from src.db.sql_repository import SQLGameRepository
 from src.main import app
@@ -18,12 +18,16 @@ from src.services.chess_service import ChessService
 def client(db_session: Session) -> Generator[TestClient, None, None]:
     """Setup FastAPI testclient with dependencies overwritten to use test-setup"""
 
-    # override for app's dependency on the service
+    # override for app's dependency on the service / database
+    def _override_get_db() -> Generator[Session, None, None]:
+        yield db_session
+
     def _override_get_chess_service() -> ChessService:
         """Do not mock the repository, but use a test db (in-memory)."""
         repository = SQLGameRepository(db_session)
         return ChessService(repository)
 
+    app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[get_chess_service] = _override_get_chess_service
     with TestClient(app) as client:
         yield client
