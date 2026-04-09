@@ -1,9 +1,11 @@
 """Integration tests: Chess games"""
 
+from contextlib import asynccontextmanager
 from typing import Any, Generator
 from uuid import UUID, uuid4
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -12,6 +14,15 @@ from src.core.config import config
 from src.db.sql_repository import SQLGameRepository
 from src.main import app
 from src.services.chess_service import ChessService
+
+
+@pytest.fixture(autouse=True, scope="session")
+def override_lifespan():
+    @asynccontextmanager
+    async def test_lifespan(_: FastAPI):
+        yield  # tables handled by db_session fixture
+
+    app.router.lifespan_context = test_lifespan
 
 
 @pytest.fixture
