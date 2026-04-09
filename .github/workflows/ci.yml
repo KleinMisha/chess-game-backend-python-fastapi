@@ -29,8 +29,7 @@ jobs:
         run: uv sync
 
       - name: Run pytest with coverage
-        run: uv run pytest --tb=long -v
-        # run: uv run pytest --cov --cov-report=term --cov-report=html --cov-report=xml -v --junitxml=test-results.xml
+        run: uv run pytest --cov --cov-report=term --cov-report=html --cov-report=xml -v --junitxml=test-results.xml
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
