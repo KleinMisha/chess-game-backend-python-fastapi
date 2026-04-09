@@ -3,18 +3,35 @@ Pytest will auto-discover / import this file called 'conftest.py'. ]
 This file defines fixtures/variables required for testing multiple layers.
 """
 
+import os
+import tempfile
 from typing import Generator
 
 import pytest
+from pytest import Session as PyTestSession
 from sqlalchemy import StaticPool, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.db.schema import Base
 
 # Setup an in-memory SQLite database for testing
-DATABASE_URL = "sqlite:///:memory:"
+IN_MEMORY_URL = "sqlite:///:memory:"
+
+# Setup temporary database file for testing.
+temp_db_file = tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False)
+
+
+def pytest_sessionfinish(session: PyTestSession, exitstatus: int) -> None:
+    """Cleanup after final test: Delete the temporary SQLite file after pytest finishes"""
+    try:
+        os.unlink(temp_db_file.name)
+    except FileNotFoundError:
+        pass
+
+
+TEMP_DB_FILE_URL = f"sqlite:///{temp_db_file.name}"
 engine = create_engine(
-    DATABASE_URL,
+    TEMP_DB_FILE_URL,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
